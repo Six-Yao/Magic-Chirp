@@ -1,0 +1,14 @@
+DATABASE_URL = "mock-memory"
+
+UPLOAD_DIR = "uploads"
+RECORD_UPLOAD_SUBDIR = "records"
+
+JWT_SECRET = "mock-secret"
+JWT_EXPIRE_MINUTES = 1440
+
+ALLOWED_EMAIL_SUFFIX = "@smail.nju.edu.cn"
+ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp"}
+MAX_IMAGE_SIZE_MB = 10
+
+USE_MOCK_AI = True
+
