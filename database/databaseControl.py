@@ -1,6 +1,5 @@
 from datetime import datetime
 
-
 _USERS: dict[int, dict] = {}
 _RECORDS: dict[int, dict] = {}
 _ATTACHMENTS: dict[int, dict] = {}
@@ -48,7 +47,9 @@ def init_db() -> None:
     )
 
 
-def create_user(email: str, password_hash: str, nickname: str, role: str = "user") -> dict:
+def create_user(
+    email: str, password_hash: str, nickname: str, role: str = "user"
+) -> dict:
     global _NEXT_USER_ID
     now = _now()
     user = {
@@ -128,7 +129,9 @@ def get_record_by_id(record_id: int) -> dict | None:
 def list_records_by_user(user_id: int) -> list[dict]:
     return [
         record
-        for record in sorted(_RECORDS.values(), key=lambda item: item["created_at"], reverse=True)
+        for record in sorted(
+            _RECORDS.values(), key=lambda item: item["created_at"], reverse=True
+        )
         if record["user_id"] == user_id
     ]
 
@@ -138,7 +141,9 @@ def list_public_records(
     start_time: str | None = None,
     end_time: str | None = None,
 ) -> list[dict]:
-    records = [record for record in _RECORDS.values() if record["visibility"] == "public"]
+    records = [
+        record for record in _RECORDS.values() if record["visibility"] == "public"
+    ]
     if bird_name:
         records = [record for record in records if bird_name in record["bird_name"]]
     return [
