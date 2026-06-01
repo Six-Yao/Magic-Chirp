@@ -8,6 +8,11 @@ python -m venv .venv
 .venv\scripts\activate
 pip install -r requirements.txt
 ```
+## 运行项目
+```
+uvicorn server:app --reload
+```
+> 可以使用[postman](https://www.postman.com/downloads/)进行测试
 ## 添加依赖
 写入 `requirements.txt` 后提交
 ## 贡献指南
