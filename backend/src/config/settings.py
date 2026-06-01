@@ -1,4 +1,6 @@
-DATABASE_URL = "mock-memory"
+import os
+
+DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite:///database/magic_chirp.db")
 
 UPLOAD_DIR = "uploads"
 RECORD_UPLOAD_SUBDIR = "records"
