@@ -36,7 +36,7 @@ DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///database/magic_chirp.db")
 UPLOAD_DIR = os.getenv("UPLOAD_DIR", "uploads")
 RECORD_UPLOAD_SUBDIR = os.getenv("RECORD_UPLOAD_SUBDIR", "records")
 
-JWT_SECRET = os.getenv("JWT_SECRET", "mock-secret")
+JWT_SECRET = os.getenv("JWT_SECRET", "use-a-more-than-32-byte-random-secret")
 JWT_EXPIRE_MINUTES = _get_int_env("JWT_EXPIRE_MINUTES", 1440)
 
 ALLOWED_EMAIL_SUFFIX = os.getenv("ALLOWED_EMAIL_SUFFIX", "@smail.nju.edu.cn")

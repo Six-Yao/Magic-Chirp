@@ -1,6 +1,7 @@
 import hashlib
-import uuid
+import time
 
+import jwt
 from fastapi import APIRouter, Depends, Header, HTTPException
 
 from backend.src.config import settings
@@ -9,7 +10,6 @@ from database.databaseControl import create_user, get_user_by_email, get_user_by
 
 
 router = APIRouter()
-_TOKENS: dict[str, int] = {}
 
 
 def hash_password(password: str) -> str:
@@ -21,13 +21,27 @@ def verify_password(password: str, password_hash: str) -> bool:
 
 
 def create_access_token(user_id: int) -> str:
-    token = f"mock-token-{uuid.uuid4().hex}"
-    _TOKENS[token] = user_id
-    return token
+    now = int(time.time())
+    payload = {
+        "sub": str(user_id),
+        "iat": now,
+        "exp": now + int(settings.JWT_EXPIRE_MINUTES) * 60,
+    }
+    return jwt.encode(payload, settings.JWT_SECRET, algorithm="HS256")
 
 
 def decode_access_token(token: str) -> int | None:
-    return _TOKENS.get(token)
+    try:
+        payload = jwt.decode(token, settings.JWT_SECRET, algorithms=["HS256"])
+    except jwt.PyJWTError:
+        return None
+    sub = payload.get("sub")
+    if not sub:
+        return None
+    try:
+        return int(sub)
+    except (TypeError, ValueError):
+        return None
 
 
 def validate_nju_email(email: str) -> None:
