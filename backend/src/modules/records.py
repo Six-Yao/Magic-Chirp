@@ -45,7 +45,7 @@ def create_record(
     location_name: str | None = Form(default=None),
     observed_at: datetime = Form(...),
     visibility: str = Form(default="public"),
-    image: UploadFile | None = File(default=None),
+    image: UploadFile = File(...),
     current_user: dict = Depends(get_current_user),
 ) -> RecordCreateResponse:
     if visibility not in {"public", "private"}:
