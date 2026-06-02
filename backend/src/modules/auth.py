@@ -27,6 +27,7 @@ def create_access_token(user_id: int) -> str:
         "iat": now,
         "exp": now + int(settings.JWT_EXPIRE_MINUTES) * 60,
     }
+    # 在达到 exp 的时间节点时(默认一天)，jwt会自动注销该 token
     return jwt.encode(payload, settings.JWT_SECRET, algorithm="HS256")
 
 

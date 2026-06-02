@@ -58,36 +58,6 @@ def init_db() -> None:
     if row[0] > 0:
         return
 
-    demo_user = create_user(
-        email="demo@smail.nju.edu.cn",
-        password_hash="ef797c8118f02dfb649607dd5d3f8c7623048c9c063d532cc95c5ed7a898a64f",
-        nickname="演示用户",
-    )
-    create_record(
-        user_id=demo_user["id"],
-        bird_name="珠颈斑鸠",
-        ai_candidates=[{"name": "珠颈斑鸠", "confidence": 0.86}],
-        description="鼓楼校区附近的演示记录",
-        latitude=32.0569,
-        longitude=118.7792,
-        location_name="南京大学鼓楼校区",
-        observed_at=_now(),
-        visibility="public",
-        cover_image_url=None,
-    )
-    create_record(
-        user_id=demo_user["id"],
-        bird_name="白头鹎",
-        ai_candidates=[{"name": "白头鹎", "confidence": 0.79}],
-        description="仙林校区附近的演示记录",
-        latitude=32.1152,
-        longitude=118.9585,
-        location_name="南京大学仙林校区",
-        observed_at=_now(),
-        visibility="public",
-        cover_image_url=None,
-    )
-
 
 # ── 用户 ──────────────────────────────────────────────
 
