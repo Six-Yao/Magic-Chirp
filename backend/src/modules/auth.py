@@ -59,6 +59,23 @@ def get_current_user(authorization: str | None = Header(default=None)) -> dict:
     return user
 
 
+def get_optional_current_user(authorization: str | None = Header(default=None)) -> dict | None:
+    if not authorization:
+        return None
+    if not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+    token = authorization.removeprefix("Bearer ").strip()
+    user_id = decode_access_token(token)
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+    user = get_user_by_id(user_id)
+    if not user:
+        raise HTTPException(status_code=401, detail="User not found")
+    return user
+
+
 @router.post("/register", response_model=UserResponse)
 def register_user(payload: UserRegister) -> UserResponse:
     validate_nju_email(payload.email)
@@ -87,4 +104,3 @@ def login_user(payload: UserLogin) -> TokenResponse:
 @router.get("/me", response_model=UserResponse)
 def get_me(current_user: dict = Depends(get_current_user)) -> UserResponse:
     return to_user_response(current_user)
-

@@ -12,6 +12,15 @@ def _now() -> datetime:
     return datetime.now()
 
 
+def _parse_datetime(value: str | None) -> datetime | None:
+    if not value:
+        return None
+    try:
+        return datetime.fromisoformat(value)
+    except ValueError:
+        return None
+
+
 def init_db() -> None:
     if _USERS:
         return
@@ -21,7 +30,7 @@ def init_db() -> None:
         password_hash="ef797c8118f02dfb649607dd5d3f8c7623048c9c063d532cc95c5ed7a898a64f",
         nickname="演示用户",
     )
-    create_record(
+    first_record = create_record(
         user_id=user["id"],
         bird_name="珠颈斑鸠",
         ai_candidates=[{"name": "珠颈斑鸠", "confidence": 0.86}],
@@ -31,9 +40,15 @@ def init_db() -> None:
         location_name="南京大学鼓楼校区",
         observed_at=_now(),
         visibility="public",
-        cover_image_url=None,
+        cover_image_url="/uploads/records/demo-spotted-dove.jpg",
     )
-    create_record(
+    create_attachment(
+        record_id=first_record["id"],
+        file_url="/uploads/records/demo-spotted-dove.jpg",
+        file_type="image",
+        mime_type="image/jpeg",
+    )
+    second_record = create_record(
         user_id=user["id"],
         bird_name="白头鹎",
         ai_candidates=[{"name": "白头鹎", "confidence": 0.79}],
@@ -43,7 +58,13 @@ def init_db() -> None:
         location_name="南京大学仙林校区",
         observed_at=_now(),
         visibility="public",
-        cover_image_url=None,
+        cover_image_url="/uploads/records/demo-egret.jpg",
+    )
+    create_attachment(
+        record_id=second_record["id"],
+        file_url="/uploads/records/demo-egret.jpg",
+        file_type="image",
+        mime_type="image/jpeg",
     )
 
 
@@ -130,7 +151,7 @@ def list_records_by_user(user_id: int) -> list[dict]:
     return [
         record
         for record in sorted(
-            _RECORDS.values(), key=lambda item: item["created_at"], reverse=True
+            _RECORDS.values(), key=lambda item: item["observed_at"], reverse=True
         )
         if record["user_id"] == user_id
     ]
@@ -146,9 +167,15 @@ def list_public_records(
     ]
     if bird_name:
         records = [record for record in records if bird_name in record["bird_name"]]
+    start_dt = _parse_datetime(start_time)
+    end_dt = _parse_datetime(end_time)
+    if start_dt:
+        records = [record for record in records if record["observed_at"] >= start_dt]
+    if end_dt:
+        records = [record for record in records if record["observed_at"] <= end_dt]
     return [
         _record_with_author(record)
-        for record in sorted(records, key=lambda item: item["created_at"], reverse=True)
+        for record in sorted(records, key=lambda item: item["observed_at"], reverse=True)
     ]
 
 

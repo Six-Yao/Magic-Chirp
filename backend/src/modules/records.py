@@ -3,7 +3,7 @@ from datetime import datetime
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 
-from backend.src.modules.auth import get_current_user
+from backend.src.modules.auth import get_current_user, get_optional_current_user
 from backend.src.schemas.record import (
     AttachmentResponse,
     MyRecordResponse,
@@ -93,12 +93,14 @@ def get_my_records(current_user: dict = Depends(get_current_user)) -> list[MyRec
 @router.get("/{record_id}", response_model=RecordDetailResponse)
 def get_record_detail(
     record_id: int,
-    current_user: dict | None = Depends(get_current_user),
+    current_user: dict | None = Depends(get_optional_current_user),
 ) -> RecordDetailResponse:
     record = get_record_by_id(record_id)
     if not record:
         raise HTTPException(status_code=404, detail="Record not found")
-    if record["visibility"] == "private" and record["user_id"] != current_user["id"]:
+    if record["visibility"] == "private" and (
+        not current_user or record["user_id"] != current_user["id"]
+    ):
         raise HTTPException(status_code=403, detail="No permission to view this record")
 
     attachments = [
@@ -106,4 +108,3 @@ def get_record_detail(
         for item in list_record_attachments(record_id)
     ]
     return RecordDetailResponse(**record, attachments=attachments)
-
