@@ -177,5 +177,6 @@ uploads/
 *.db
 *.db-shm
 *.db-wal
+!options.db
 
 # End of https://www.toptal.com/developers/gitignore/api/python

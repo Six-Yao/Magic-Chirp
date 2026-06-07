@@ -61,9 +61,6 @@ def init_db() -> None:
     _ensure_user_columns(conn)
     conn.commit()
 
-    row = conn.execute("SELECT COUNT(*) FROM users").fetchone()
-    if row[0] > 0:
-        return
 
 
 def create_user(
@@ -257,21 +254,24 @@ def list_public_records(
 
 
 def list_public_record_options() -> dict:
-    conn = get_connection()
+    '''如果不存在的话说明后端配置有问题，所以不检查 & 初始化'''
+    conn = sqlite3.connect(str(Path("database/options.db")), check_same_thread=False)
     bird_rows = conn.execute(
-        "SELECT DISTINCT bird_name FROM bird_records "
-        "WHERE visibility = 'public' AND bird_name IS NOT NULL AND bird_name != '' "
-        "ORDER BY bird_name"
+        "SELECT DISTINCT name FROM bird_names "
+        "WHERE name IS NOT NULL AND name != '' "
+        "ORDER BY name"
     ).fetchall()
     location_rows = conn.execute(
-        "SELECT DISTINCT location_name FROM bird_records "
-        "WHERE visibility = 'public' AND location_name IS NOT NULL AND location_name != '' "
-        "ORDER BY location_name"
+        "SELECT name, longitude_left, longitude_right, latitude_left, latitude_right FROM locations "
+        "WHERE name IS NOT NULL AND name != '' "
+        "ORDER BY name"
     ).fetchall()
+
+    locations = {row[0]: (row[1], row[2], row[3], row[4]) for row in location_rows}
 
     return {
         "bird_names": [row[0] for row in bird_rows],
-        "location_names": [row[0] for row in location_rows],
+        "locations": locations
     }
 
 
