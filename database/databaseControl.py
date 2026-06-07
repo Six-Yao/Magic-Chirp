@@ -222,6 +222,7 @@ def list_public_records(
     bird_name: str | None = None,
     start_time: str | None = None,
     end_time: str | None = None,
+    publisher: str | None = None,
 ) -> list[dict]:
     conn = get_connection()
     query = (
@@ -242,10 +243,32 @@ def list_public_records(
     if end_time:
         query += " AND r.observed_at <= ?"
         params.append(end_time)
+    if publisher:
+        query += " AND u.nickname LIKE ?"
+        params.append(f"%{publisher}%")
     query += " ORDER BY r.created_at DESC"
 
     rows = conn.execute(query, params).fetchall()
     return [_record_with_author(dict(row)) for row in rows]
+
+
+def list_public_record_options() -> dict:
+    conn = get_connection()
+    bird_rows = conn.execute(
+        "SELECT DISTINCT bird_name FROM bird_records "
+        "WHERE visibility = 'public' AND bird_name IS NOT NULL AND bird_name != '' "
+        "ORDER BY bird_name"
+    ).fetchall()
+    location_rows = conn.execute(
+        "SELECT DISTINCT location_name FROM bird_records "
+        "WHERE visibility = 'public' AND location_name IS NOT NULL AND location_name != '' "
+        "ORDER BY location_name"
+    ).fetchall()
+
+    return {
+        "bird_names": [row[0] for row in bird_rows],
+        "location_names": [row[0] for row in location_rows],
+    }
 
 
 def update_record_by_id(record_id: int, data: dict) -> dict | None:

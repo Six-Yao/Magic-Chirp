@@ -1,5 +1,5 @@
 import json
-from datetime import datetime
+from datetime import date, datetime, time
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 
@@ -7,6 +7,8 @@ from backend.src.modules.auth import get_current_user
 from backend.src.schemas.record import (
     AttachmentResponse,
     MyRecordResponse,
+    PublicRecordOptionsResponse,
+    PublicRecordResponse,
     RecordCreateResponse,
     RecordDetailResponse,
 )
@@ -15,6 +17,8 @@ from database.databaseControl import (
     create_attachment,
     create_record as db_create_record,
     get_record_by_id,
+    list_public_record_options,
+    list_public_records,
     list_record_attachments,
     list_records_by_user,
 )
@@ -33,6 +37,13 @@ def parse_ai_candidates(ai_candidates: str | None) -> list[dict] | None:
     if not isinstance(value, list):
         raise HTTPException(status_code=400, detail="ai_candidates must be a JSON array")
     return value
+
+
+def _date_to_iso(value: date | None, *, end_of_day: bool = False) -> str | None:
+    if value is None:
+        return None
+    moment = datetime.combine(value, time.max if end_of_day else time.min)
+    return moment.isoformat()
 
 
 @router.post("", response_model=RecordCreateResponse)
@@ -88,6 +99,27 @@ def create_record(
 def get_my_records(current_user: dict = Depends(get_current_user)) -> list[MyRecordResponse]:
     records = list_records_by_user(current_user["id"])
     return [MyRecordResponse(**record) for record in records]
+
+
+@router.get("/public", response_model=list[PublicRecordResponse])
+def list_public_records_api(
+    bird_name: str | None = None,
+    publisher: str | None = None,
+    start_date: date | None = None,
+    end_date: date | None = None,
+) -> list[PublicRecordResponse]:
+    records = list_public_records(
+        bird_name=bird_name,
+        start_time=_date_to_iso(start_date),
+        end_time=_date_to_iso(end_date, end_of_day=True),
+        publisher=publisher,
+    )
+    return [PublicRecordResponse(**record) for record in records]
+
+
+@router.get("/options", response_model=PublicRecordOptionsResponse)
+def get_public_record_options() -> PublicRecordOptionsResponse:
+    return PublicRecordOptionsResponse(**list_public_record_options())
 
 
 @router.get("/{record_id}", response_model=RecordDetailResponse)
