@@ -66,4 +66,3 @@ class PublicRecordResponse(BaseModel):
 class PublicRecordOptionsResponse(BaseModel):
     bird_names: list[str]
     locations: dict
-

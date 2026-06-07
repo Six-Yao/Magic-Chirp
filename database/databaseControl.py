@@ -47,25 +47,35 @@ def get_connection() -> sqlite3.Connection:
     return _conn
 
 
+def _ensure_user_columns(conn: sqlite3.Connection) -> None:
+    columns = {row["name"] for row in conn.execute("PRAGMA table_info(users)").fetchall()}
+    if "bio" not in columns:
+        conn.execute("ALTER TABLE users ADD COLUMN bio TEXT")
+
+
 def init_db() -> None:
     conn = get_connection()
     conn.execute(USERS_TABLE_SQL)
     conn.execute(BIRD_RECORDS_TABLE_SQL)
     conn.execute(ATTACHMENTS_TABLE_SQL)
+    _ensure_user_columns(conn)
     conn.commit()
 
 
 
-# ── 用户 ──────────────────────────────────────────────
-
-
-def create_user(email: str, password_hash: str, nickname: str, role: str = "user") -> dict:
+def create_user(
+    email: str,
+    password_hash: str,
+    nickname: str,
+    role: str = "user",
+    bio: str | None = None,
+) -> dict:
     conn = get_connection()
     now = _now()
     cursor = conn.execute(
-        "INSERT INTO users (email, password_hash, nickname, role, created_at, updated_at) "
-        "VALUES (?, ?, ?, ?, ?, ?)",
-        (email, password_hash, nickname, role, now, now),
+        "INSERT INTO users (email, password_hash, nickname, bio, role, created_at, updated_at) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?)",
+        (email, password_hash, nickname, bio or "", role, now, now),
     )
     conn.commit()
     return {
@@ -73,6 +83,7 @@ def create_user(email: str, password_hash: str, nickname: str, role: str = "user
         "email": email,
         "password_hash": password_hash,
         "nickname": nickname,
+        "bio": bio or "",
         "avatar_url": None,
         "role": role,
         "created_at": now,
@@ -94,31 +105,14 @@ def get_user_by_id(user_id: int) -> dict | None:
     return dict(row) if row else None
 
 
-def update_user_profile(
-    user_id: int,
-    nickname: str | None = None,
-    avatar_url: str | None = None,
-) -> dict | None:
+def update_user_profile(user_id: int, nickname: str, bio: str | None) -> dict | None:
     conn = get_connection()
-    parts = []
-    params: list = []
-    if nickname is not None:
-        parts.append("nickname = ?")
-        params.append(nickname)
-    if avatar_url is not None:
-        parts.append("avatar_url = ?")
-        params.append(avatar_url)
-    if not parts:
-        return get_user_by_id(user_id)
-    parts.append("updated_at = ?")
-    params.append(_now())
-    params.append(user_id)
-    conn.execute(f"UPDATE users SET {', '.join(parts)} WHERE id = ?", params)
+    conn.execute(
+        "UPDATE users SET nickname = ?, bio = ?, updated_at = ? WHERE id = ?",
+        (nickname, bio or "", _now(), user_id),
+    )
     conn.commit()
     return get_user_by_id(user_id)
-
-
-# ── 记录 ──────────────────────────────────────────────
 
 
 def create_record(
@@ -144,8 +138,18 @@ def create_record(
         "cover_image_url, created_at, updated_at) "
         "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         (
-            user_id, bird_name, ai_json, description, latitude, longitude,
-            location_name, observed_str, visibility, cover_image_url, now, now,
+            user_id,
+            bird_name,
+            ai_json,
+            description,
+            latitude,
+            longitude,
+            location_name,
+            observed_str,
+            visibility,
+            cover_image_url,
+            now,
+            now,
         ),
     )
     conn.commit()
@@ -274,8 +278,14 @@ def list_public_record_options() -> dict:
 def update_record_by_id(record_id: int, data: dict) -> dict | None:
     conn = get_connection()
     allowed = {
-        "bird_name", "description", "latitude", "longitude",
-        "location_name", "observed_at", "visibility", "cover_image_url",
+        "bird_name",
+        "description",
+        "latitude",
+        "longitude",
+        "location_name",
+        "observed_at",
+        "visibility",
+        "cover_image_url",
         "ai_candidates",
     }
     parts = []
@@ -307,9 +317,6 @@ def delete_record_by_id(record_id: int) -> bool:
     cursor = conn.execute("DELETE FROM bird_records WHERE id = ?", (record_id,))
     conn.commit()
     return cursor.rowcount > 0
-
-
-# ── 附件 ──────────────────────────────────────────────
 
 
 def create_attachment(

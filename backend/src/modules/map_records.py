@@ -21,4 +21,3 @@ def list_map_records(
         publisher=publisher,
     )
     return [MapRecordResponse(**record) for record in records]
-
