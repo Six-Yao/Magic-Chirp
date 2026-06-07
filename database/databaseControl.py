@@ -69,7 +69,7 @@ def init_db() -> None:
 
 
 def create_user(
-    email: str, password_hash: str, nickname: str, role: str = "user"
+    email: str, password_hash: str, nickname: str, role: str = "user", bio: str | None = None
 ) -> dict:
     global _NEXT_USER_ID
     now = _now()
@@ -78,6 +78,7 @@ def create_user(
         "email": email,
         "password_hash": password_hash,
         "nickname": nickname,
+        "bio": bio or "",
         "avatar_url": None,
         "role": role,
         "created_at": now,
@@ -85,6 +86,17 @@ def create_user(
     }
     _USERS[_NEXT_USER_ID] = user
     _NEXT_USER_ID += 1
+    return user
+
+
+def update_user_profile(user_id: int, nickname: str, bio: str | None) -> dict | None:
+    user = get_user_by_id(user_id)
+    if not user:
+        return None
+
+    user["nickname"] = nickname
+    user["bio"] = bio or ""
+    user["updated_at"] = _now()
     return user
 
 

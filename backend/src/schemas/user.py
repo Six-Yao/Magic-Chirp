@@ -16,6 +16,7 @@ class UserResponse(BaseModel):
     id: int
     email: str
     nickname: str
+    bio: str = ""
     role: str
 
 
@@ -23,3 +24,8 @@ class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
     user: UserResponse
+
+
+class UserProfileUpdate(BaseModel):
+    nickname: str
+    bio: str | None = None

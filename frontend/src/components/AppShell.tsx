@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   BookOpen,
   Camera,
@@ -6,8 +6,8 @@ import {
   Filter,
   Map,
   Search,
-  Settings,
   Sprout,
+  X,
 } from 'lucide-react';
 import { api } from '../api/client';
 import BirdsView from '../pages/BirdsView';
@@ -15,8 +15,9 @@ import MapView from '../pages/MapView';
 import ProfileView from '../pages/ProfileView';
 import RecordsView from '../pages/RecordsView';
 import '../pages/views.css';
-import type { ActiveTab, AuthState, MapRecord, RecordDetail } from '../types/models';
+import type { ActiveTab, AuthState, MapRecord, RecordDetail, RecordFilter } from '../types/models';
 import CreateRecordDrawer from './CreateRecordDrawer';
+import FilterDrawer from './FilterDrawer';
 import LoginDrawer from './LoginDrawer';
 import RecordDetailDrawer from './RecordDetailDrawer';
 import SettingsDrawer from './SettingsDrawer';
@@ -24,12 +25,21 @@ import './AppShell.css';
 
 const TOKEN_KEY = 'magic_chirp_token';
 
-const tabMeta: Record<ActiveTab, { title: string; subtitle: string }> = {
-  map: { title: '校园观鸟', subtitle: 'Magic-Chirp' },
-  records: { title: '全校记录', subtitle: '公开观鸟手账' },
-  birds: { title: '鸟种图鉴', subtitle: '校园鸟类整理中' },
-  profile: { title: '我的小角落', subtitle: '观鸟窗台' },
-};
+function matchesSearch(record: Pick<MapRecord, 'bird_name' | 'location_name' | 'author_nickname'>, query: string) {
+  if (!query) return true;
+
+  return [record.bird_name, record.location_name, record.author_nickname]
+    .filter(Boolean)
+    .some((value) => value!.toLowerCase().includes(query));
+}
+
+function matchesFilter(record: MapRecord, filter: RecordFilter) {
+  if (filter.dateRange === 'all') return true;
+
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - (filter.dateRange === 'week' ? 7 : 30));
+  return new Date(record.observed_at) >= cutoff;
+}
 
 function AppShell() {
   const [activeTab, setActiveTab] = useState<ActiveTab>('map');
@@ -42,20 +52,38 @@ function AppShell() {
   const [recordsStatus, setRecordsStatus] = useState<'loading' | 'ready' | 'error'>('loading');
   const [loginOpen, setLoginOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [filterOpen, setFilterOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [detailRecord, setDetailRecord] = useState<RecordDetail | null>(null);
   const [detailStatus, setDetailStatus] = useState<'idle' | 'loading' | 'error'>('idle');
   const [notice, setNotice] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [recordFilter, setRecordFilter] = useState<RecordFilter>({ dateRange: 'all' });
 
-  const currentMeta = tabMeta[activeTab];
+  const normalizedSearch = searchQuery.trim().toLowerCase();
   const isLoggedIn = auth.status === 'authenticated' && Boolean(auth.user && auth.token);
+  const filteredRecords = useMemo(
+    () => records.filter((record) => matchesSearch(record, normalizedSearch) && matchesFilter(record, recordFilter)),
+    [records, normalizedSearch, recordFilter],
+  );
+  const hasActiveFilter = recordFilter.dateRange !== 'all';
+
+  const showNotice = useCallback((message: string | null) => {
+    setNotice(message);
+  }, []);
+
+  useEffect(() => {
+    if (!notice) return;
+    const timer = window.setTimeout(() => setNotice(null), 5000);
+    return () => window.clearTimeout(timer);
+  }, [notice]);
   const recentMapRecords = useMemo(() => {
     const cutoff = new Date();
     cutoff.setDate(cutoff.getDate() - 7);
-    return [...records]
+    return [...filteredRecords]
       .filter((record) => new Date(record.observed_at) >= cutoff)
       .sort((left, right) => +new Date(right.observed_at) - +new Date(left.observed_at));
-  }, [records]);
+  }, [filteredRecords]);
 
   async function refreshMapRecords() {
     setRecordsStatus('loading');
@@ -95,8 +123,7 @@ function AppShell() {
       setDetailStatus('idle');
     } catch (error) {
       setDetailStatus('error');
-      setNotice(error instanceof Error ? error.message : '记录详情加载失败');
-      window.setTimeout(() => setNotice(null), 2200);
+      showNotice(error instanceof Error ? error.message : '记录详情加载失败');
     }
   }
 
@@ -136,8 +163,7 @@ function AppShell() {
     setCreateOpen(false);
     await refreshMapRecords();
     await openRecordDetail(recordId);
-    setNotice('记录成功，新的小鸟点位已加入地图。');
-    window.setTimeout(() => setNotice(null), 2400);
+    showNotice('记录成功，新的鸟类点位已加入地图');
   }
 
   const content = useMemo(() => {
@@ -148,55 +174,50 @@ function AppShell() {
           status={recordsStatus}
           onRefresh={refreshMapRecords}
           onOpenRecord={openRecordDetail}
+          onStatusMessage={showNotice}
         />
       );
     }
     if (activeTab === 'records') {
-      return <RecordsView records={records} status={recordsStatus} onOpenRecord={openRecordDetail} />;
+      return <RecordsView records={filteredRecords} status={recordsStatus} searchQuery={normalizedSearch} onOpenRecord={openRecordDetail} />;
     }
     if (activeTab === 'birds') {
-      return <BirdsView records={records} />;
+      return <BirdsView records={filteredRecords} searchQuery={normalizedSearch} />;
     }
     return (
       <ProfileView
         token={auth.token}
         user={auth.user}
         isLoggedIn={isLoggedIn}
+        searchQuery={normalizedSearch}
         onLoginRequest={() => setLoginOpen(true)}
         onLogout={handleLogout}
+        onSettingsRequest={() => setSettingsOpen(true)}
+        onProfileUpdated={(user) => setAuth((current) => ({ ...current, user }))}
         onOpenRecord={openRecordDetail}
       />
     );
-  }, [activeTab, auth.token, auth.user, isLoggedIn, records, recordsStatus]);
+  }, [activeTab, auth.token, auth.user, filteredRecords, isLoggedIn, normalizedSearch, recordsStatus, showNotice]);
 
   return (
     <div className="app-layout">
-      <header className="app-header">
-        <div className="brand-tile" aria-hidden="true">
-          <span>啾</span>
-        </div>
-        <div className="title-block">
-          <p>{currentMeta.subtitle}</p>
-          <h1>{currentMeta.title}</h1>
-        </div>
-        <button
-          className="header-icon-button"
-          type="button"
-          aria-label="打开设置"
-          onClick={() => setSettingsOpen(true)}
-        >
-          <Settings size={22} />
-        </button>
-      </header>
-
       <section className="search-strip" aria-label="搜索和筛选">
         <label className="pixel-input">
           <Search size={18} />
-          <input placeholder="搜索鸟种、地点或用户" />
+          <input
+            value={searchQuery}
+            placeholder="搜索鸟种、地点或用户"
+            onChange={(event) => setSearchQuery(event.target.value)}
+          />
+          {searchQuery && (
+            <button className="search-clear" type="button" aria-label="清空搜索" onClick={() => setSearchQuery('')}>
+              <X size={16} />
+            </button>
+          )}
         </label>
-        <button className="filter-chip" type="button">
+        <button className={`filter-chip ${hasActiveFilter ? 'active' : ''}`} type="button" onClick={() => setFilterOpen(true)}>
           <Filter size={18} />
-          <span>筛选</span>
+          <span>{hasActiveFilter ? '已筛选' : '筛选'}</span>
         </button>
       </section>
 
@@ -259,6 +280,12 @@ function AppShell() {
           handleLogout();
           setSettingsOpen(false);
         }}
+      />
+      <FilterDrawer
+        open={filterOpen}
+        value={recordFilter}
+        onChange={setRecordFilter}
+        onClose={() => setFilterOpen(false)}
       />
       <RecordDetailDrawer
         record={detailRecord}

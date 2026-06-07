@@ -4,6 +4,7 @@ export type User = {
   id: number;
   email: string;
   nickname: string;
+  bio: string;
   role: string;
 };
 
@@ -77,4 +78,8 @@ export type CreateRecordResponse = {
   bird_name: string;
   detail_url: string;
   message: string;
+};
+
+export type RecordFilter = {
+  dateRange: 'all' | 'week' | 'month';
 };

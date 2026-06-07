@@ -1,15 +1,42 @@
+@font-face {
+  font-family: "Cubic 11";
+  src: url("./assets/fonts/Cubic_11.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  color: #315c2b;
-  background: #dfeec9;
+  font-family:
+    "Cubic 11",
+    "Zpix",
+    "Fusion Pixel",
+    "PixelMplus10",
+    "PixelMplus12",
+    "Ark Pixel",
+    "Minecraft AE",
+    "Microsoft YaHei UI",
+    "Microsoft YaHei",
+    monospace;
+  font-size: 20px;
+  color: #3f2e23;
+  background: #f6d79b;
   font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  text-rendering: geometricPrecision;
+  -webkit-font-smoothing: none;
+  -moz-osx-font-smoothing: unset;
+  --motion-smooth: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --motion-pop: cubic-bezier(0.22, 1.2, 0.36, 1);
 }
 
 * {
   box-sizing: border-box;
+  letter-spacing: 0;
+}
+
+*::selection {
+  background: #f5b85a;
+  color: #3f2e23;
 }
 
 html,
@@ -22,6 +49,14 @@ body,
 
 body {
   overflow-x: hidden;
+}
+
+body,
+button,
+input,
+textarea,
+select {
+  font-family: inherit;
 }
 
 button {
@@ -39,4 +74,15 @@ select {
 img {
   max-width: 100%;
   display: block;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
 }

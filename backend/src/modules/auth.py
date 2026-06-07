@@ -4,8 +4,8 @@ import uuid
 from fastapi import APIRouter, Depends, Header, HTTPException
 
 from backend.src.config import settings
-from backend.src.schemas.user import TokenResponse, UserLogin, UserRegister, UserResponse
-from database.databaseControl import create_user, get_user_by_email, get_user_by_id
+from backend.src.schemas.user import TokenResponse, UserLogin, UserProfileUpdate, UserRegister, UserResponse
+from database.databaseControl import create_user, get_user_by_email, get_user_by_id, update_user_profile
 
 
 router = APIRouter()
@@ -40,6 +40,7 @@ def to_user_response(user: dict) -> UserResponse:
         id=user["id"],
         email=user["email"],
         nickname=user["nickname"],
+        bio=user.get("bio", ""),
         role=user["role"],
     )
 
@@ -104,3 +105,20 @@ def login_user(payload: UserLogin) -> TokenResponse:
 @router.get("/me", response_model=UserResponse)
 def get_me(current_user: dict = Depends(get_current_user)) -> UserResponse:
     return to_user_response(current_user)
+
+
+@router.patch("/me", response_model=UserResponse)
+def update_me(payload: UserProfileUpdate, current_user: dict = Depends(get_current_user)) -> UserResponse:
+    nickname = payload.nickname.strip()
+    bio = (payload.bio or "").strip()
+    if not nickname:
+        raise HTTPException(status_code=400, detail="Nickname is required")
+    if len(nickname) > 24:
+        raise HTTPException(status_code=400, detail="Nickname is too long")
+    if len(bio) > 80:
+        raise HTTPException(status_code=400, detail="Bio is too long")
+
+    user = update_user_profile(current_user["id"], nickname, bio)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return to_user_response(user)

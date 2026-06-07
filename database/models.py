@@ -4,6 +4,7 @@ CREATE TABLE IF NOT EXISTS users (
     email TEXT NOT NULL UNIQUE,
     password_hash TEXT NOT NULL,
     nickname TEXT NOT NULL,
+    bio TEXT,
     avatar_url TEXT,
     role TEXT NOT NULL DEFAULT 'user',
     created_at TEXT NOT NULL,
@@ -42,4 +43,3 @@ CREATE TABLE IF NOT EXISTS attachments (
     FOREIGN KEY (record_id) REFERENCES bird_records(id)
 );
 """
-

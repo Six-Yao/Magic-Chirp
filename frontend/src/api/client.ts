@@ -13,7 +13,7 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://127.0.0.1:8000
 type RequestOptions = {
   token?: string | null;
   body?: BodyInit | Record<string, unknown>;
-  method?: 'GET' | 'POST' | 'PUT' | 'DELETE';
+  method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 };
 
 async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
@@ -54,6 +54,12 @@ export function resolveAssetUrl(url?: string | null): string | null {
 
 export const api = {
   getMe: (token: string) => request<User>('/api/auth/me', { token }),
+  updateMe: (token: string, nickname: string, bio: string) =>
+    request<User>('/api/auth/me', {
+      method: 'PATCH',
+      token,
+      body: { nickname, bio },
+    }),
   login: (email: string, password: string) =>
     request<LoginResponse>('/api/auth/login', {
       method: 'POST',

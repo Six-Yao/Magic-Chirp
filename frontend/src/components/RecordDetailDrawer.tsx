@@ -23,12 +23,15 @@ function RecordDetailDrawer({
   const imageUrl = resolveAssetUrl(record?.attachments[0]?.file_url);
   const confidence = record?.ai_candidates?.[0]?.confidence;
 
+
   return (
     <DrawerShell open={loading || Boolean(record)} title="观鸟记录" onClose={onClose}>
       {loading && <p className="drawer-note">正在寻找这条观鸟记录...</p>}
       {record && (
         <article className="detail-card">
-          <div className="detail-image">{imageUrl ? <img src={imageUrl} alt={record.bird_name} /> : <span>鸟</span>}</div>
+          <div className="detail-image">
+            {imageUrl ? <img src={imageUrl} alt={record.bird_name} /> : <span>鸟</span>}
+          </div>
           <div className="detail-title-row">
             <h3>{record.bird_name}</h3>
             <span>{record.visibility === 'public' ? '公开' : '私密'}</span>
