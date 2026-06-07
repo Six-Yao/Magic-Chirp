@@ -50,3 +50,19 @@ class MapRecordResponse(BaseModel):
     cover_image_url: str | None = None
     author_nickname: str
 
+
+class PublicRecordResponse(BaseModel):
+    id: int
+    bird_name: str
+    latitude: float
+    longitude: float
+    location_name: str | None = None
+    observed_at: datetime
+    cover_image_url: str | None = None
+    author_nickname: str
+    description: str | None = None
+
+
+class PublicRecordOptionsResponse(BaseModel):
+    bird_names: list[str]
+    location_names: list[str]

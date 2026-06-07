@@ -15,7 +15,7 @@ import MapView from '../pages/MapView';
 import ProfileView from '../pages/ProfileView';
 import RecordsView from '../pages/RecordsView';
 import '../pages/views.css';
-import type { ActiveTab, AuthState, MapRecord, RecordDetail, RecordFilter } from '../types/models';
+import type { ActiveTab, AuthState, MapRecord, RecordDetail, RecordFilter, RecordQuery } from '../types/models';
 import CreateRecordDrawer from './CreateRecordDrawer';
 import FilterDrawer from './FilterDrawer';
 import LoginDrawer from './LoginDrawer';
@@ -41,6 +41,17 @@ function matchesFilter(record: MapRecord, filter: RecordFilter) {
   return new Date(record.observed_at) >= cutoff;
 }
 
+function mapFilterToQuery(filter: RecordFilter): RecordQuery {
+  if (filter.dateRange === 'all') return {};
+
+  const start = new Date();
+  start.setDate(start.getDate() - (filter.dateRange === 'week' ? 7 : 30));
+  return {
+    startTime: start.toISOString().slice(0, 19),
+    endTime: new Date().toISOString().slice(0, 19),
+  };
+}
+
 function AppShell() {
   const [activeTab, setActiveTab] = useState<ActiveTab>('map');
   const [auth, setAuth] = useState<AuthState>({
@@ -61,6 +72,7 @@ function AppShell() {
   const [recordFilter, setRecordFilter] = useState<RecordFilter>({ dateRange: 'all' });
 
   const normalizedSearch = searchQuery.trim().toLowerCase();
+  const mapRecordQuery = useMemo(() => mapFilterToQuery(recordFilter), [recordFilter]);
   const isLoggedIn = auth.status === 'authenticated' && Boolean(auth.user && auth.token);
   const filteredRecords = useMemo(
     () => records.filter((record) => matchesSearch(record, normalizedSearch) && matchesFilter(record, recordFilter)),
@@ -88,7 +100,7 @@ function AppShell() {
   async function refreshMapRecords() {
     setRecordsStatus('loading');
     try {
-      const items = await api.listMapRecords();
+      const items = await api.listMapRecords(mapRecordQuery);
       setRecords(items);
       setRecordsStatus('ready');
     } catch {
@@ -98,7 +110,7 @@ function AppShell() {
 
   useEffect(() => {
     refreshMapRecords();
-  }, []);
+  }, [mapRecordQuery]);
 
   useEffect(() => {
     if (!auth.token) {

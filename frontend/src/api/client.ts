@@ -4,7 +4,10 @@ import type {
   LoginResponse,
   MapRecord,
   MyRecord,
+  PublicRecord,
+  PublicRecordOptions,
   RecordDetail,
+  RecordQuery,
   User,
 } from '../types/models';
 
@@ -46,6 +49,18 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   return response.json() as Promise<T>;
 }
 
+function buildRecordQuery(query: RecordQuery = {}) {
+  const params = new URLSearchParams();
+  if (query.birdName) params.set('bird_name', query.birdName);
+  if (query.publisher) params.set('publisher', query.publisher);
+  if (query.startTime) params.set('start_time', query.startTime);
+  if (query.endTime) params.set('end_time', query.endTime);
+  if (query.startDate) params.set('start_date', query.startDate);
+  if (query.endDate) params.set('end_date', query.endDate);
+  const value = params.toString();
+  return value ? `?${value}` : '';
+}
+
 export function resolveAssetUrl(url?: string | null): string | null {
   if (!url) return null;
   if (url.startsWith('http')) return url;
@@ -70,7 +85,11 @@ export const api = {
       method: 'POST',
       body: { email, password, nickname },
     }),
-  listMapRecords: () => request<MapRecord[]>('/api/map/records'),
+  listMapRecords: (query?: RecordQuery) =>
+    request<MapRecord[]>(`/api/map/records${buildRecordQuery(query)}`),
+  listPublicRecords: (query?: RecordQuery) =>
+    request<PublicRecord[]>(`/api/records/public${buildRecordQuery(query)}`),
+  getRecordOptions: () => request<PublicRecordOptions>('/api/records/options'),
   getRecordDetail: (id: number, token?: string | null) =>
     request<RecordDetail>(`/api/records/${id}`, { token }),
   listMyRecords: (token: string) => request<MyRecord[]>('/api/records/mine', { token }),

@@ -173,12 +173,19 @@ def list_public_records(
     bird_name: str | None = None,
     start_time: str | None = None,
     end_time: str | None = None,
+    publisher: str | None = None,
 ) -> list[dict]:
     records = [
         record for record in _RECORDS.values() if record["visibility"] == "public"
     ]
     if bird_name:
         records = [record for record in records if bird_name in record["bird_name"]]
+    if publisher:
+        records = [
+            record
+            for record in records
+            if publisher in (get_user_by_id(record["user_id"]) or {}).get("nickname", "")
+        ]
     start_dt = _parse_datetime(start_time)
     end_dt = _parse_datetime(end_time)
     if start_dt:
@@ -189,6 +196,31 @@ def list_public_records(
         _record_with_author(record)
         for record in sorted(records, key=lambda item: item["observed_at"], reverse=True)
     ]
+
+
+def list_public_record_options() -> dict:
+    public_records = [
+        record for record in _RECORDS.values() if record["visibility"] == "public"
+    ]
+    bird_names = sorted(
+        {
+            record["bird_name"]
+            for record in public_records
+            if record.get("bird_name")
+        }
+    )
+    location_names = sorted(
+        {
+            record["location_name"]
+            for record in public_records
+            if record.get("location_name")
+        }
+    )
+
+    return {
+        "bird_names": bird_names,
+        "location_names": location_names,
+    }
 
 
 def create_attachment(

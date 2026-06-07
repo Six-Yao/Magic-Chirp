@@ -25,6 +25,24 @@ export type MapRecord = {
   author_nickname: string;
 };
 
+export type PublicRecord = MapRecord & {
+  description?: string | null;
+};
+
+export type PublicRecordOptions = {
+  bird_names: string[];
+  location_names: string[];
+};
+
+export type RecordQuery = {
+  birdName?: string;
+  publisher?: string;
+  startTime?: string;
+  endTime?: string;
+  startDate?: string;
+  endDate?: string;
+};
+
 export type BirdCandidate = {
   name: string;
   confidence: number;
