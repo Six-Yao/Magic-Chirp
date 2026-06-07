@@ -253,6 +253,7 @@ def list_public_records(
 
 
 def list_public_record_options() -> dict:
+    '''TODO: 将可选鸟类改在新的数据库页里面单独存储，而不是这样'''
     conn = get_connection()
     bird_rows = conn.execute(
         "SELECT DISTINCT bird_name FROM bird_records "
