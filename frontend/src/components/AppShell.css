@@ -116,6 +116,38 @@
   grid-template-columns: repeat(3, 1fr);
 }
 
+.option-chip-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.option-chip-grid button {
+  min-height: 40px;
+  padding: 8px 10px;
+  border: 3px solid #70442d;
+  border-radius: 8px;
+  background: #fff8db;
+  color: #3f2e23;
+  font-weight: 900;
+  transition:
+    transform 150ms var(--motion-pop),
+    background-color 180ms var(--motion-smooth),
+    box-shadow 180ms var(--motion-smooth);
+}
+
+.option-chip-grid button.active {
+  background: #f4c866;
+  transform: translateY(2px);
+  box-shadow: inset 0 -4px 0 rgba(154, 90, 44, 0.24);
+}
+
+.option-chip-grid p {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: #756f5c;
+}
+
 .app-content {
   position: absolute;
   top: 74px;
@@ -402,7 +434,8 @@
 
 .segmented-control button,
 .visibility-toggle button,
-.candidate-list button {
+.candidate-list button,
+.location-tools button {
   min-height: 42px;
   border: 3px solid #70442d;
   border-radius: 8px;
@@ -505,6 +538,37 @@
   grid-column: 1 / -1;
   margin: 0;
   color: #756f5c;
+}
+
+.location-tools {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.location-tools button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.location-tools button:disabled {
+  opacity: 0.72;
+}
+
+.location-readout {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: -2px 0 0;
+  padding: 8px 10px;
+  border: 3px solid #d19b5a;
+  border-radius: 8px;
+  background: #fff8db;
+  color: #66523d;
+  font-size: 18px;
+  font-weight: 900;
 }
 
 .detail-card {

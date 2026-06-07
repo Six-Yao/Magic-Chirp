@@ -25,13 +25,27 @@ export type MapRecord = {
   author_nickname: string;
 };
 
+export type BirdPointLocation = {
+  latitude: number;
+  longitude: number;
+  locationName?: string;
+  source: 'default' | 'gps' | 'map';
+};
+
+export type LocationCache = {
+  location: BirdPointLocation | null;
+  accuracy: number | null;
+  updatedAt: number | null;
+  status: 'idle' | 'ready' | 'error' | 'unsupported';
+};
+
 export type PublicRecord = MapRecord & {
   description?: string | null;
 };
 
 export type PublicRecordOptions = {
   bird_names: string[];
-  location_names: string[];
+  locations: Record<string, [number, number, number, number]>;
 };
 
 export type RecordQuery = {
@@ -100,4 +114,6 @@ export type CreateRecordResponse = {
 
 export type RecordFilter = {
   dateRange: 'all' | 'week' | 'month';
+  birdName?: string;
+  locationName?: string;
 };

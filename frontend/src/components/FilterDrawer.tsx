@@ -1,4 +1,4 @@
-import type { RecordFilter } from '../types/models';
+import type { PublicRecordOptions, RecordFilter } from '../types/models';
 import DrawerShell from './DrawerShell';
 
 const dateOptions: Array<{ label: string; value: RecordFilter['dateRange'] }> = [
@@ -10,15 +10,19 @@ const dateOptions: Array<{ label: string; value: RecordFilter['dateRange'] }> = 
 function FilterDrawer({
   open,
   value,
+  options,
   onChange,
   onClose,
 }: {
   open: boolean;
   value: RecordFilter;
+  options: PublicRecordOptions;
   onChange: (value: RecordFilter) => void;
   onClose: () => void;
 }) {
-  const hasActiveFilter = value.dateRange !== 'all';
+  const hasActiveFilter = value.dateRange !== 'all' || Boolean(value.birdName || value.locationName);
+  const birdOptions = options.bird_names.slice(0, 12);
+  const locationOptions = Object.keys(options.locations);
 
   function resetFilters() {
     onChange({ dateRange: 'all' });
@@ -40,6 +44,42 @@ function FilterDrawer({
                 {option.label}
               </button>
             ))}
+          </div>
+        </section>
+
+        <section className="filter-section">
+          <h3>鸟种</h3>
+          <div className="option-chip-grid">
+            {birdOptions.map((birdName) => (
+              <button
+                className={value.birdName === birdName ? 'active' : ''}
+                key={birdName}
+                type="button"
+                onClick={() => onChange({ ...value, birdName: value.birdName === birdName ? undefined : birdName })}
+              >
+                {birdName}
+              </button>
+            ))}
+            {birdOptions.length === 0 && <p>暂无鸟种选项</p>}
+          </div>
+        </section>
+
+        <section className="filter-section">
+          <h3>地点范围</h3>
+          <div className="option-chip-grid">
+            {locationOptions.map((locationName) => (
+              <button
+                className={value.locationName === locationName ? 'active' : ''}
+                key={locationName}
+                type="button"
+                onClick={() =>
+                  onChange({ ...value, locationName: value.locationName === locationName ? undefined : locationName })
+                }
+              >
+                {locationName}
+              </button>
+            ))}
+            {locationOptions.length === 0 && <p>暂无地点选项</p>}
           </div>
         </section>
 

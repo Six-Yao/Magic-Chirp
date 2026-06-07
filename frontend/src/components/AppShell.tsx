@@ -15,7 +15,18 @@ import MapView from '../pages/MapView';
 import ProfileView from '../pages/ProfileView';
 import RecordsView from '../pages/RecordsView';
 import '../pages/views.css';
-import type { ActiveTab, AuthState, MapRecord, RecordDetail, RecordFilter, RecordQuery } from '../types/models';
+import type {
+  ActiveTab,
+  AuthState,
+  BirdPointLocation,
+  LocationCache,
+  MapRecord,
+  PublicRecordOptions,
+  RecordDetail,
+  RecordFilter,
+  RecordQuery,
+} from '../types/models';
+import { wgs84ToGcj02 } from '../utils/coordinates';
 import CreateRecordDrawer from './CreateRecordDrawer';
 import FilterDrawer from './FilterDrawer';
 import LoginDrawer from './LoginDrawer';
@@ -24,6 +35,7 @@ import SettingsDrawer from './SettingsDrawer';
 import './AppShell.css';
 
 const TOKEN_KEY = 'magic_chirp_token';
+const LOCATION_REFRESH_MS = 30_000;
 
 function matchesSearch(record: Pick<MapRecord, 'bird_name' | 'location_name' | 'author_nickname'>, query: string) {
   if (!query) return true;
@@ -33,23 +45,56 @@ function matchesSearch(record: Pick<MapRecord, 'bird_name' | 'location_name' | '
     .some((value) => value!.toLowerCase().includes(query));
 }
 
-function matchesFilter(record: MapRecord, filter: RecordFilter) {
-  if (filter.dateRange === 'all') return true;
+function isInsideLocation(record: MapRecord, bounds?: [number, number, number, number]) {
+  if (!bounds) return true;
 
-  const cutoff = new Date();
-  cutoff.setDate(cutoff.getDate() - (filter.dateRange === 'week' ? 7 : 30));
-  return new Date(record.observed_at) >= cutoff;
+  const [longitudeLeft, longitudeRight, latitudeLeft, latitudeRight] = bounds;
+  const minLongitude = Math.min(longitudeLeft, longitudeRight);
+  const maxLongitude = Math.max(longitudeLeft, longitudeRight);
+  const minLatitude = Math.min(latitudeLeft, latitudeRight);
+  const maxLatitude = Math.max(latitudeLeft, latitudeRight);
+
+  return (
+    record.longitude >= minLongitude &&
+    record.longitude <= maxLongitude &&
+    record.latitude >= minLatitude &&
+    record.latitude <= maxLatitude
+  );
+}
+
+function matchLocationName(
+  location: Pick<BirdPointLocation, 'latitude' | 'longitude'>,
+  locations: PublicRecordOptions['locations'],
+) {
+  return Object.entries(locations).find(([, bounds]) =>
+    isInsideLocation(
+      {
+        id: 0,
+        bird_name: '',
+        latitude: location.latitude,
+        longitude: location.longitude,
+        observed_at: '',
+        author_nickname: '',
+      },
+      bounds,
+    ),
+  )?.[0];
 }
 
 function mapFilterToQuery(filter: RecordFilter): RecordQuery {
-  if (filter.dateRange === 'all') return {};
+  const query: RecordQuery = {};
+
+  if (filter.birdName) {
+    query.birdName = filter.birdName;
+  }
+
+  if (filter.dateRange === 'all') return query;
 
   const start = new Date();
   start.setDate(start.getDate() - (filter.dateRange === 'week' ? 7 : 30));
-  return {
-    startTime: start.toISOString().slice(0, 19),
-    endTime: new Date().toISOString().slice(0, 19),
-  };
+  query.startTime = start.toISOString().slice(0, 19);
+  query.endTime = new Date().toISOString().slice(0, 19);
+  return query;
 }
 
 function AppShell() {
@@ -65,20 +110,30 @@ function AppShell() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
+  const [pointPickMode, setPointPickMode] = useState(false);
+  const [pendingLocation, setPendingLocation] = useState<BirdPointLocation | null>(null);
   const [detailRecord, setDetailRecord] = useState<RecordDetail | null>(null);
   const [detailStatus, setDetailStatus] = useState<'idle' | 'loading' | 'error'>('idle');
   const [notice, setNotice] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [recordFilter, setRecordFilter] = useState<RecordFilter>({ dateRange: 'all' });
+  const [recordOptions, setRecordOptions] = useState<PublicRecordOptions>({ bird_names: [], locations: {} });
+  const [locationCache, setLocationCache] = useState<LocationCache>({
+    location: null,
+    accuracy: null,
+    updatedAt: null,
+    status: 'idle',
+  });
 
   const normalizedSearch = searchQuery.trim().toLowerCase();
   const mapRecordQuery = useMemo(() => mapFilterToQuery(recordFilter), [recordFilter]);
   const isLoggedIn = auth.status === 'authenticated' && Boolean(auth.user && auth.token);
+  const selectedLocationBounds = recordFilter.locationName ? recordOptions.locations[recordFilter.locationName] : undefined;
   const filteredRecords = useMemo(
-    () => records.filter((record) => matchesSearch(record, normalizedSearch) && matchesFilter(record, recordFilter)),
-    [records, normalizedSearch, recordFilter],
+    () => records.filter((record) => matchesSearch(record, normalizedSearch) && isInsideLocation(record, selectedLocationBounds)),
+    [records, normalizedSearch, selectedLocationBounds],
   );
-  const hasActiveFilter = recordFilter.dateRange !== 'all';
+  const hasActiveFilter = recordFilter.dateRange !== 'all' || Boolean(recordFilter.birdName || recordFilter.locationName);
 
   const showNotice = useCallback((message: string | null) => {
     setNotice(message);
@@ -111,6 +166,49 @@ function AppShell() {
   useEffect(() => {
     refreshMapRecords();
   }, [mapRecordQuery]);
+
+  useEffect(() => {
+    api
+      .getRecordOptions()
+      .then(setRecordOptions)
+      .catch(() => setRecordOptions({ bird_names: [], locations: {} }));
+  }, []);
+
+  useEffect(() => {
+    if (!navigator.geolocation) {
+      setLocationCache((current) => ({ ...current, status: 'unsupported' }));
+      return;
+    }
+
+    function refreshCurrentLocation() {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const gcjLocation = wgs84ToGcj02(position.coords.longitude, position.coords.latitude);
+          const matchedLocation = matchLocationName(gcjLocation, recordOptions.locations);
+          const nextLocation: BirdPointLocation = {
+            latitude: gcjLocation.latitude,
+            longitude: gcjLocation.longitude,
+            locationName: matchedLocation ?? '当前位置',
+            source: 'gps',
+          };
+          setLocationCache({
+            location: nextLocation,
+            accuracy: position.coords.accuracy,
+            updatedAt: Date.now(),
+            status: 'ready',
+          });
+        },
+        () => {
+          setLocationCache((current) => ({ ...current, status: 'error' }));
+        },
+        { enableHighAccuracy: true, timeout: 10_000, maximumAge: LOCATION_REFRESH_MS },
+      );
+    }
+
+    refreshCurrentLocation();
+    const timer = window.setInterval(refreshCurrentLocation, LOCATION_REFRESH_MS);
+    return () => window.clearInterval(timer);
+  }, [recordOptions.locations]);
 
   useEffect(() => {
     if (!auth.token) {
@@ -148,7 +246,32 @@ function AppShell() {
   }
 
   function handleCreateClick() {
-    requireLogin(() => setCreateOpen(true));
+    requireLogin(() => {
+      setPointPickMode(false);
+      setCreateOpen(true);
+    });
+  }
+
+  function handlePickOnMap() {
+    setCreateOpen(false);
+    setDetailRecord(null);
+    setPointPickMode(true);
+    setActiveTab('map');
+    showNotice('点击地图来放置这次观鸟的位置');
+  }
+
+  function handleLocationPicked(location: BirdPointLocation) {
+    const matchedLocation = matchLocationName(location, recordOptions.locations);
+    setPendingLocation(matchedLocation ? { ...location, locationName: matchedLocation } : location);
+    setPointPickMode(false);
+    setCreateOpen(true);
+    showNotice('鸟点位置已选好，可以继续填写记录');
+  }
+
+  function handleCreateClose() {
+    setCreateOpen(false);
+    setPointPickMode(false);
+    setPendingLocation(null);
   }
 
   function handleProfileClick() {
@@ -173,6 +296,8 @@ function AppShell() {
 
   async function handleCreated(recordId: number) {
     setCreateOpen(false);
+    setPointPickMode(false);
+    setPendingLocation(null);
     await refreshMapRecords();
     await openRecordDetail(recordId);
     showNotice('记录成功，新的鸟类点位已加入地图');
@@ -184,8 +309,12 @@ function AppShell() {
         <MapView
           records={recentMapRecords}
           status={recordsStatus}
+          pointPickMode={pointPickMode}
+          selectedLocation={pendingLocation}
+          currentLocation={locationCache.location}
           onRefresh={refreshMapRecords}
           onOpenRecord={openRecordDetail}
+          onPickLocation={handleLocationPicked}
           onStatusMessage={showNotice}
         />
       );
@@ -209,7 +338,18 @@ function AppShell() {
         onOpenRecord={openRecordDetail}
       />
     );
-  }, [activeTab, auth.token, auth.user, filteredRecords, isLoggedIn, normalizedSearch, recordsStatus, showNotice]);
+  }, [
+    activeTab,
+    auth.token,
+    auth.user,
+    filteredRecords,
+    isLoggedIn,
+    normalizedSearch,
+    pendingLocation,
+    pointPickMode,
+    recordsStatus,
+    showNotice,
+  ]);
 
   return (
     <div className="app-layout">
@@ -296,6 +436,7 @@ function AppShell() {
       <FilterDrawer
         open={filterOpen}
         value={recordFilter}
+        options={recordOptions}
         onChange={setRecordFilter}
         onClose={() => setFilterOpen(false)}
       />
@@ -307,8 +448,13 @@ function AppShell() {
       <CreateRecordDrawer
         open={createOpen}
         token={auth.token}
-        onClose={() => setCreateOpen(false)}
+        selectedLocation={pendingLocation}
+        locations={recordOptions.locations}
+        currentLocation={locationCache.location}
+        currentLocationStatus={locationCache.status}
+        onClose={handleCreateClose}
         onCreated={handleCreated}
+        onPickOnMap={handlePickOnMap}
       />
 
       {notice && <div className="toast-message">{notice}</div>}

@@ -1,30 +1,75 @@
-import { Camera, Globe2, Lock } from 'lucide-react';
-import { useState } from 'react';
+import { Camera, Crosshair, Globe2, LocateFixed, Lock, MapPin } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { api } from '../api/client';
-import type { BirdCandidate } from '../types/models';
+import type { BirdCandidate, BirdPointLocation, LocationCache, PublicRecordOptions } from '../types/models';
 import DrawerShell from './DrawerShell';
+
+const DEFAULT_LOCATION: BirdPointLocation = {
+  latitude: 32.0569,
+  longitude: 118.7792,
+  locationName: '南京大学校园',
+  source: 'default',
+};
+
+function matchLocationName(
+  location: Pick<BirdPointLocation, 'latitude' | 'longitude'>,
+  locations: PublicRecordOptions['locations'],
+) {
+  return Object.entries(locations).find(([, bounds]) => {
+    const [longitudeLeft, longitudeRight, latitudeLeft, latitudeRight] = bounds;
+    const minLongitude = Math.min(longitudeLeft, longitudeRight);
+    const maxLongitude = Math.max(longitudeLeft, longitudeRight);
+    const minLatitude = Math.min(latitudeLeft, latitudeRight);
+    const maxLatitude = Math.max(latitudeLeft, latitudeRight);
+
+    return (
+      location.longitude >= minLongitude &&
+      location.longitude <= maxLongitude &&
+      location.latitude >= minLatitude &&
+      location.latitude <= maxLatitude
+    );
+  })?.[0];
+}
 
 function CreateRecordDrawer({
   open,
   token,
+  selectedLocation,
+  locations,
+  currentLocation,
+  currentLocationStatus,
   onClose,
   onCreated,
+  onPickOnMap,
 }: {
   open: boolean;
   token: string | null;
+  selectedLocation: BirdPointLocation | null;
+  locations: PublicRecordOptions['locations'];
+  currentLocation: BirdPointLocation | null;
+  currentLocationStatus: LocationCache['status'];
   onClose: () => void;
   onCreated: (recordId: number) => void;
+  onPickOnMap: () => void;
 }) {
   const [image, setImage] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [candidates, setCandidates] = useState<BirdCandidate[]>([]);
   const [birdName, setBirdName] = useState('');
-  const [locationName, setLocationName] = useState('南京大学校园');
+  const [location, setLocation] = useState<BirdPointLocation>(selectedLocation ?? DEFAULT_LOCATION);
+  const [locationName, setLocationName] = useState(selectedLocation?.locationName ?? DEFAULT_LOCATION.locationName);
   const [observedAt, setObservedAt] = useState(new Date().toISOString().slice(0, 16));
   const [description, setDescription] = useState('');
   const [visibility, setVisibility] = useState<'public' | 'private'>('public');
   const [message, setMessage] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (!selectedLocation) return;
+    const matchedLocation = matchLocationName(selectedLocation, locations);
+    setLocation(selectedLocation);
+    setLocationName(matchedLocation ?? selectedLocation.locationName ?? '地图点选位置');
+  }, [locations, selectedLocation]);
 
   async function handleImage(file: File | null) {
     setImage(file);
@@ -51,14 +96,19 @@ function CreateRecordDrawer({
       setMessage('请填写鸟种名称。');
       return;
     }
+    if (!image) {
+      setMessage('请先添加照片。');
+      return;
+    }
 
     const form = new FormData();
     form.append('bird_name', birdName.trim());
     form.append('ai_candidates', JSON.stringify(candidates));
     form.append('description', description);
-    form.append('latitude', '32.0569');
-    form.append('longitude', '118.7792');
-    form.append('location_name', locationName || '南京大学校园');
+    form.append('latitude', String(location.latitude));
+    form.append('longitude', String(location.longitude));
+    const submittedLocationName = locationName || location.locationName || '南京大学校园';
+    form.append('location_name', submittedLocationName);
     form.append('observed_at', observedAt);
     form.append('visibility', visibility);
     if (image) form.append('image', image);
@@ -78,6 +128,31 @@ function CreateRecordDrawer({
     } finally {
       setSubmitting(false);
     }
+  }
+
+  function useCurrentLocation() {
+    if (currentLocationStatus === 'unsupported') {
+      setMessage('当前浏览器不支持定位，可以改用地图点选。');
+      return;
+    }
+    if (!currentLocation) {
+      setMessage(currentLocationStatus === 'error' ? '定位缓存更新失败，可以改用地图点选。' : '当前位置还在获取中，请稍后再试。');
+      return;
+    }
+
+    const matchedLocation = matchLocationName(currentLocation, locations);
+    const nextLocation = {
+      ...currentLocation,
+      locationName: matchedLocation ?? currentLocation.locationName ?? '当前位置',
+    };
+    setLocation(nextLocation);
+    setLocationName(nextLocation.locationName);
+    setMessage(null);
+  }
+
+  function pickOnMap() {
+    onPickOnMap();
+    setMessage('在地图上点击一下，就会把鸟点位置带回这里。');
   }
 
   return (
@@ -122,6 +197,21 @@ function CreateRecordDrawer({
           位置
           <input value={locationName} onChange={(event) => setLocationName(event.target.value)} />
         </label>
+        <div className="location-tools">
+          <button type="button" onClick={useCurrentLocation}>
+            <LocateFixed size={18} />
+            当前定位
+          </button>
+          <button type="button" onClick={pickOnMap}>
+            <Crosshair size={18} />
+            地图点选
+          </button>
+        </div>
+        <p className="location-readout">
+          <MapPin size={16} />
+          {location.source === 'gps' ? '定位' : location.source === 'map' ? '点选' : '默认'}：
+          {location.latitude.toFixed(6)}, {location.longitude.toFixed(6)}
+        </p>
         <label>
           时间
           <input type="datetime-local" value={observedAt} onChange={(event) => setObservedAt(event.target.value)} />
