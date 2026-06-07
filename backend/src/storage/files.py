@@ -14,6 +14,8 @@ def ensure_upload_dirs() -> None:
 def validate_image(file: UploadFile) -> None:
     if file.content_type not in settings.ALLOWED_IMAGE_TYPES:
         raise HTTPException(status_code=400, detail="Only JPG, PNG, or WEBP images are supported")
+    if not file.size or file.size > settings.MAX_IMAGE_SIZE_MB * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="Too Big Image")
 
 
 def generate_file_name(original_filename: str | None) -> str:

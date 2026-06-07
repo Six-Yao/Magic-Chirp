@@ -8,6 +8,15 @@ python -m venv .venv
 .venv\scripts\activate
 pip install -r requirements.txt
 ```
+## 运行项目
+### 修改配置
+1. 复制`.env.example`并改名为`.env`
+2. 在`.env`中填入相关配置
+### 运行程序
+```
+uvicorn server:app --reload
+```
+> 可以使用[postman](https://www.postman.com/downloads/)进行测试
 ## 添加依赖
 写入 `requirements.txt` 后提交
 ## 贡献指南
