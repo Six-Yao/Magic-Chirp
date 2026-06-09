@@ -3,13 +3,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from dotenv import load_dotenv
 
+load_dotenv()
+
 from backend.src.config import settings
 from backend.src.modules import auth, identify, map_records, records
 from backend.src.storage.files import ensure_upload_dirs
 from database.databaseControl import init_db
 
-
-load_dotenv()
 
 def create_app() -> FastAPI:
     app = FastAPI(title="Magic-Chirp Mock API", version="0.1.0")
