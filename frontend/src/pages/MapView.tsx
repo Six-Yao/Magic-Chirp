@@ -1,7 +1,7 @@
 ﻿import { Minus, Plus, RefreshCw, RotateCcw } from 'lucide-react';
 import type { CSSProperties, PointerEvent } from 'react';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import campusMapUrl from '../assets/campus-map.png';
+import campusMapUrl from '../assets/campus-map.webp';
 import type { BirdPointLocation, MapRecord } from '../types/models';
 import { getPixelBirdAsset } from '../utils/birdAssets';
 import './views.css';
