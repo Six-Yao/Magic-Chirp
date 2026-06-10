@@ -14,6 +14,7 @@ function ProfileView({
   onSettingsRequest,
   onProfileUpdated,
   onOpenRecord,
+  deletedRecordId,
 }: {
   token: string | null;
   user: User | null;
@@ -24,6 +25,7 @@ function ProfileView({
   onSettingsRequest: () => void;
   onProfileUpdated: (user: User) => void;
   onOpenRecord: (recordId: number) => void;
+  deletedRecordId: number | null;
 }) {
   const [records, setRecords] = useState<MyRecord[]>([]);
   const [loading, setLoading] = useState(false);
@@ -49,6 +51,11 @@ function ProfileView({
   useEffect(() => {
     setVisibleCount(pageSize);
   }, [records, searchQuery]);
+
+  useEffect(() => {
+    if (!deletedRecordId) return;
+    setRecords((current) => current.filter((record) => record.id !== deletedRecordId));
+  }, [deletedRecordId]);
 
   useEffect(() => {
     setNicknameDraft(user?.nickname ?? '');

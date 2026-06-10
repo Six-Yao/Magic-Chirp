@@ -1,3 +1,5 @@
+import { Trash2 } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { resolveAssetUrl } from '../api/client';
 import type { RecordDetail } from '../types/models';
 import DrawerShell from './DrawerShell';
@@ -14,15 +16,34 @@ function formatTime(value: string) {
 function RecordDetailDrawer({
   record,
   loading,
+  canDelete,
+  deleting,
   onClose,
+  onDelete,
 }: {
   record: RecordDetail | null;
   loading: boolean;
+  canDelete: boolean;
+  deleting: boolean;
   onClose: () => void;
+  onDelete: (recordId: number) => void;
 }) {
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
   const imageUrl = resolveAssetUrl(record?.attachments[0]?.file_url);
   const confidence = record?.ai_candidates?.[0]?.confidence;
 
+  useEffect(() => {
+    setConfirmingDelete(false);
+  }, [record?.id]);
+
+  function handleDeleteClick() {
+    if (!record || deleting) return;
+    if (!confirmingDelete) {
+      setConfirmingDelete(true);
+      return;
+    }
+    onDelete(record.id);
+  }
 
   return (
     <DrawerShell open={loading || Boolean(record)} title="观鸟记录" onClose={onClose}>
@@ -49,6 +70,15 @@ function RecordDetailDrawer({
             </div>
           )}
           <p className="detail-description">{record.description || '这条记录还没有备注。'}</p>
+          {canDelete && (
+            <div className="detail-danger-zone">
+              {confirmingDelete && <p>再次点击删除，这条鸟点会从地图和记录里移除。</p>}
+              <button className="settings-action danger" type="button" onClick={handleDeleteClick} disabled={deleting}>
+                <Trash2 size={18} />
+                <span>{deleting ? '删除中...' : confirmingDelete ? '确认删除鸟点' : '删除鸟点'}</span>
+              </button>
+            </div>
+          )}
         </article>
       )}
     </DrawerShell>

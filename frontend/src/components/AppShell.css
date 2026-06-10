@@ -647,6 +647,28 @@
   background: #7dbb51;
 }
 
+.detail-danger-zone {
+  display: grid;
+  gap: 8px;
+  margin-top: 4px;
+  padding-top: 12px;
+  border-top: 3px dashed #d49a62;
+}
+
+.detail-danger-zone p {
+  margin: 0;
+  color: #9a3d22;
+  font-weight: 900;
+  line-height: 1.45;
+}
+
+.settings-action:disabled,
+.primary-action:disabled {
+  cursor: wait;
+  opacity: 0.7;
+  transform: none;
+}
+
 .toast-message {
   position: absolute;
   z-index: 60;

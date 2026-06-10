@@ -92,6 +92,11 @@ export const api = {
   getRecordOptions: () => request<PublicRecordOptions>('/api/records/options'),
   getRecordDetail: (id: number, token?: string | null) =>
     request<RecordDetail>(`/api/records/${id}`, { token }),
+  deleteRecord: (id: number, token: string) =>
+    request<{ message: string; id: number; deleted_files: string[] }>(`/api/records/${id}`, {
+      method: 'DELETE',
+      token,
+    }),
   listMyRecords: (token: string) => request<MyRecord[]>('/api/records/mine', { token }),
   identifyBird: (image: File, token?: string | null) => {
     const form = new FormData();

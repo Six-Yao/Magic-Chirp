@@ -144,15 +144,14 @@ def get_record_detail(
 
 
 @router.delete("/{record_id}")
-def delete_record_endpoint(record_id: int) -> dict:
+def delete_record_endpoint(record_id: int, current_user: dict = Depends(get_current_user)) -> dict:
     record = get_record_by_id(record_id)
     if not record:
         raise HTTPException(status_code=404, detail="Record not found")
+    if record["user_id"] != current_user["id"]:
+        raise HTTPException(status_code=403, detail="No permission to delete this record")
 
     file_urls = delete_record_by_id(record_id)
-    if not file_urls:
-        raise HTTPException(status_code=500, detail="Failed to delete record")
-    
     for url in file_urls:
         try:
             delete_file_by_url(url)

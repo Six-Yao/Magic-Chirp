@@ -114,6 +114,8 @@ function AppShell() {
   const [pendingLocation, setPendingLocation] = useState<BirdPointLocation | null>(null);
   const [detailRecord, setDetailRecord] = useState<RecordDetail | null>(null);
   const [detailStatus, setDetailStatus] = useState<'idle' | 'loading' | 'error'>('idle');
+  const [deletingRecordId, setDeletingRecordId] = useState<number | null>(null);
+  const [deletedRecordId, setDeletedRecordId] = useState<number | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [recordFilter, setRecordFilter] = useState<RecordFilter>({ dateRange: 'all' });
@@ -303,6 +305,26 @@ function AppShell() {
     showNotice('记录成功，新的鸟类点位已加入地图');
   }
 
+  async function handleDeleteRecord(recordId: number) {
+    if (!auth.token) {
+      setLoginOpen(true);
+      return;
+    }
+
+    setDeletingRecordId(recordId);
+    try {
+      await api.deleteRecord(recordId, auth.token);
+      setDetailRecord(null);
+      setDeletedRecordId(recordId);
+      await refreshMapRecords();
+      showNotice('鸟点已删除');
+    } catch (error) {
+      showNotice(error instanceof Error ? error.message : '删除鸟点失败');
+    } finally {
+      setDeletingRecordId(null);
+    }
+  }
+
   const content = useMemo(() => {
     if (activeTab === 'map') {
       return (
@@ -336,12 +358,14 @@ function AppShell() {
         onSettingsRequest={() => setSettingsOpen(true)}
         onProfileUpdated={(user) => setAuth((current) => ({ ...current, user }))}
         onOpenRecord={openRecordDetail}
+        deletedRecordId={deletedRecordId}
       />
     );
   }, [
     activeTab,
     auth.token,
     auth.user,
+    deletedRecordId,
     filteredRecords,
     isLoggedIn,
     normalizedSearch,
@@ -443,7 +467,10 @@ function AppShell() {
       <RecordDetailDrawer
         record={detailRecord}
         loading={detailStatus === 'loading'}
+        canDelete={Boolean(auth.user && detailRecord && auth.user.id === detailRecord.author.id)}
+        deleting={Boolean(detailRecord && deletingRecordId === detailRecord.id)}
         onClose={() => setDetailRecord(null)}
+        onDelete={handleDeleteRecord}
       />
       <CreateRecordDrawer
         open={createOpen}
