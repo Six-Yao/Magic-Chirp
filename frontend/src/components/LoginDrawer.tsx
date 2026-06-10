@@ -12,8 +12,8 @@ function LoginDrawer({
   onLoginSuccess: (token: string) => void;
 }) {
   const [mode, setMode] = useState<'login' | 'register'>('login');
-  const [email, setEmail] = useState('demo@smail.nju.edu.cn');
-  const [password, setPassword] = useState('12345678');
+  const [email, setEmail] = useState();
+  const [password, setPassword] = useState();
   const [nickname, setNickname] = useState('');
   const [message, setMessage] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
