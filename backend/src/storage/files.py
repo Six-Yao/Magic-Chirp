@@ -1,5 +1,5 @@
 import shutil
-import uuid
+import uuid, os
 from pathlib import Path
 
 from fastapi import HTTPException, UploadFile
@@ -38,3 +38,26 @@ def save_upload_file(file: UploadFile, subdir: str = settings.RECORD_UPLOAD_SUBD
 
     return f"/uploads/{relative_path.as_posix()}"
 
+
+def delete_file_by_url(file_url: str) -> bool:
+    if not file_url.startswith("/uploads/"):
+        raise ValueError(f"Invalid file URL: {file_url}")
+
+    relative_path = file_url[len("/uploads/") :]
+    target_path = Path(settings.UPLOAD_DIR) / relative_path
+
+    try:
+        target_path = target_path.resolve()
+        upload_dir = Path(settings.UPLOAD_DIR).resolve()
+        if upload_dir not in target_path.parents and target_path.parent != upload_dir:
+            raise ValueError("Path traversal detected")
+    except Exception as e:
+        raise ValueError(f"Invalid file path: {e}") from e
+
+    if target_path.exists():
+        try:
+            os.remove(target_path)
+            return True
+        except OSError:
+            return False
+    return True

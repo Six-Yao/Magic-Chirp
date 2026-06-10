@@ -311,12 +311,15 @@ def update_record_by_id(record_id: int, data: dict) -> dict | None:
     return get_record_by_id(record_id)
 
 
-def delete_record_by_id(record_id: int) -> bool:
+def delete_record_by_id(record_id: int) -> list[str]:
     conn = get_connection()
+    
+    cursor = conn.execute("SELECT file_url FROM attachments WHERE record_id = ?", (record_id,))
+    file_urls = [row[0] for row in cursor.fetchall()]
     conn.execute("DELETE FROM attachments WHERE record_id = ?", (record_id,))
-    cursor = conn.execute("DELETE FROM bird_records WHERE id = ?", (record_id,))
+    conn.execute("DELETE FROM bird_records WHERE id = ?", (record_id,))
     conn.commit()
-    return cursor.rowcount > 0
+    return file_urls
 
 
 def create_attachment(

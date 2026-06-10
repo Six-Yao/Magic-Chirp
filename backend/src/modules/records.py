@@ -12,7 +12,7 @@ from backend.src.schemas.record import (
     RecordCreateResponse,
     RecordDetailResponse,
 )
-from backend.src.storage.files import save_upload_file
+from backend.src.storage.files import save_upload_file, delete_file_by_url
 from database.databaseControl import (
     create_attachment,
     create_record as db_create_record,
@@ -21,6 +21,7 @@ from database.databaseControl import (
     list_public_records,
     list_record_attachments,
     list_records_by_user,
+    delete_record_by_id
 )
 
 
@@ -140,3 +141,23 @@ def get_record_detail(
         for item in list_record_attachments(record_id)
     ]
     return RecordDetailResponse(**record, attachments=attachments)
+
+
+@router.delete("/{record_id}")
+def delete_record_endpoint(record_id: int) -> dict:
+    record = get_record_by_id(record_id)
+    if not record:
+        raise HTTPException(status_code=404, detail="Record not found")
+
+    file_urls = delete_record_by_id(record_id)
+    if not file_urls:
+        raise HTTPException(status_code=500, detail="Failed to delete record")
+    
+    for url in file_urls:
+        try:
+            delete_file_by_url(url)
+        except Exception as e:
+            # 记录日志但不阻断删除记录的操作, 感觉有点意义不明
+            print(f"Failed to delete file {url}: {e}")
+
+    return {"message": "record deleted", "id": record_id, "deleted_files": file_urls}
