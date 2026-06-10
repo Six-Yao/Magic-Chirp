@@ -23,6 +23,9 @@ const MAP_OVERSCROLL_RESISTANCE = 0.36;
 const MAP_SCALE_OVERSCROLL = 0.18;
 const WHEEL_ZOOM_FACTOR = 1.11;
 const BUTTON_ZOOM_FACTOR = 1.18;
+const TOUCH_DRAG_BASE_SPEED = 1.08;
+const TOUCH_DRAG_SCALE_SPEED = 0.09;
+const TOUCH_DRAG_MAX_SPEED = 1.55;
 const CLUSTER_DISTANCE = 4.8;
 const FRESHNESS_STEP_HOURS = 3;
 const FRESHNESS_STEPS = 8;
@@ -134,6 +137,14 @@ function createClusters(records: MapRecord[], scale: number) {
   });
 
   return clusters;
+}
+
+function dragSpeedMultiplier(scale: number, pointerType: string) {
+  if (pointerType !== 'touch') return 1;
+  return Math.min(
+    TOUCH_DRAG_MAX_SPEED,
+    TOUCH_DRAG_BASE_SPEED + Math.max(0, scale - DEFAULT_SCALE) * TOUCH_DRAG_SCALE_SPEED,
+  );
 }
 
 function MapView({
@@ -465,9 +476,13 @@ function MapView({
     const activePointers = Array.from(pointers.current.values());
 
     if (activePointers.length === 1) {
+      const pointerType = event.pointerType;
       const dx = event.clientX - previous.x;
       const dy = event.clientY - previous.y;
-      setViewport((current) => rubberBandViewport({ ...current, x: current.x + dx, y: current.y + dy }));
+      setViewport((current) => {
+        const dragSpeed = dragSpeedMultiplier(current.scale, pointerType);
+        return rubberBandViewport({ ...current, x: current.x + dx * dragSpeed, y: current.y + dy * dragSpeed });
+      });
       return;
     }
 

@@ -1,7 +1,7 @@
 import { Camera, Crosshair, Globe2, LocateFixed, Lock, MapPin } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { api } from '../api/client';
-import type { BirdCandidate, BirdPointLocation, LocationCache, PublicRecordOptions } from '../types/models';
+import type { BirdCandidate, BirdPointLocation, PublicRecordOptions } from '../types/models';
 import DrawerShell from './DrawerShell';
 
 const DEFAULT_LOCATION: BirdPointLocation = {
@@ -9,6 +9,20 @@ const DEFAULT_LOCATION: BirdPointLocation = {
   longitude: 118.7792,
   locationName: '南京大学校园',
   source: 'default',
+};
+const DRAFT_IMAGE_DB = 'magic-chirp-drafts';
+const DRAFT_IMAGE_STORE = 'files';
+const DRAFT_IMAGE_KEY = 'create-record-image';
+
+type WakeLockSentinel = {
+  release: () => Promise<void>;
+  released: boolean;
+};
+
+type NavigatorWithWakeLock = Navigator & {
+  wakeLock?: {
+    request: (type: 'screen') => Promise<WakeLockSentinel>;
+  };
 };
 
 function matchLocationName(
@@ -31,13 +45,72 @@ function matchLocationName(
   })?.[0];
 }
 
+function openDraftImageDb() {
+  return new Promise<IDBDatabase>((resolve, reject) => {
+    if (!window.indexedDB) {
+      reject(new Error('当前浏览器不支持草稿缓存'));
+      return;
+    }
+
+    const request = window.indexedDB.open(DRAFT_IMAGE_DB, 1);
+    request.onupgradeneeded = () => {
+      request.result.createObjectStore(DRAFT_IMAGE_STORE);
+    };
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
+
+async function saveDraftImage(file: File) {
+  const db = await openDraftImageDb();
+  return new Promise<void>((resolve, reject) => {
+    const transaction = db.transaction(DRAFT_IMAGE_STORE, 'readwrite');
+    transaction.objectStore(DRAFT_IMAGE_STORE).put(file, DRAFT_IMAGE_KEY);
+    transaction.oncomplete = () => {
+      db.close();
+      resolve();
+    };
+    transaction.onerror = () => {
+      db.close();
+      reject(transaction.error);
+    };
+  });
+}
+
+async function loadDraftImage() {
+  const db = await openDraftImageDb();
+  return new Promise<File | null>((resolve, reject) => {
+    const transaction = db.transaction(DRAFT_IMAGE_STORE, 'readonly');
+    const request = transaction.objectStore(DRAFT_IMAGE_STORE).get(DRAFT_IMAGE_KEY);
+    request.onsuccess = () => resolve(request.result instanceof File ? request.result : null);
+    request.onerror = () => reject(request.error);
+    transaction.oncomplete = () => db.close();
+  });
+}
+
+async function clearDraftImage() {
+  const db = await openDraftImageDb();
+  return new Promise<void>((resolve, reject) => {
+    const transaction = db.transaction(DRAFT_IMAGE_STORE, 'readwrite');
+    transaction.objectStore(DRAFT_IMAGE_STORE).delete(DRAFT_IMAGE_KEY);
+    transaction.oncomplete = () => {
+      db.close();
+      resolve();
+    };
+    transaction.onerror = () => {
+      db.close();
+      reject(transaction.error);
+    };
+  });
+}
+
 function CreateRecordDrawer({
   open,
   token,
   selectedLocation,
   locations,
   currentLocation,
-  currentLocationStatus,
+  onRequestCurrentLocation,
   onClose,
   onCreated,
   onPickOnMap,
@@ -47,7 +120,7 @@ function CreateRecordDrawer({
   selectedLocation: BirdPointLocation | null;
   locations: PublicRecordOptions['locations'];
   currentLocation: BirdPointLocation | null;
-  currentLocationStatus: LocationCache['status'];
+  onRequestCurrentLocation: () => Promise<BirdPointLocation>;
   onClose: () => void;
   onCreated: (recordId: number) => void;
   onPickOnMap: () => void;
@@ -63,7 +136,9 @@ function CreateRecordDrawer({
   const [description, setDescription] = useState('');
   const [visibility, setVisibility] = useState<'public' | 'private'>('public');
   const [message, setMessage] = useState<string | null>(null);
+  const [locating, setLocating] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const wakeLockRef = useRef<WakeLockSentinel | null>(null);
 
   useEffect(() => {
     if (!selectedLocation) return;
@@ -72,19 +147,83 @@ function CreateRecordDrawer({
     setLocationName(matchedLocation ?? selectedLocation.locationName ?? '地图点选位置');
   }, [locations, selectedLocation]);
 
-  async function handleImage(file: File | null) {
+  useEffect(() => {
+    if (!open || image) return;
+
+    let cancelled = false;
+    loadDraftImage()
+      .then((draftImage) => {
+        if (cancelled || !draftImage) return;
+        handleImage(draftImage, { persistDraft: false, restored: true });
+      })
+      .catch(() => undefined);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [image, open]);
+
+  useEffect(() => {
+    if (!open) return;
+
+    let cancelled = false;
+
+    async function requestWakeLock() {
+      const wakeLock = (navigator as NavigatorWithWakeLock).wakeLock;
+      if (!window.isSecureContext || !wakeLock || document.visibilityState !== 'visible') return;
+      if (wakeLockRef.current && !wakeLockRef.current.released) return;
+
+      try {
+        const lock = await wakeLock.request('screen');
+        if (cancelled) {
+          lock.release().catch(() => undefined);
+          return;
+        }
+        wakeLockRef.current = lock;
+      } catch {
+        wakeLockRef.current = null;
+      }
+    }
+
+    function handleVisibilityChange() {
+      if (document.visibilityState === 'visible') {
+        requestWakeLock();
+      }
+    }
+
+    requestWakeLock();
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      cancelled = true;
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      wakeLockRef.current?.release().catch(() => undefined);
+      wakeLockRef.current = null;
+    };
+  }, [open]);
+
+  async function handleImage(
+    file: File | null,
+    options: { persistDraft?: boolean; restored?: boolean } = {},
+  ) {
+    const { persistDraft = true, restored = false } = options;
     setImage(file);
     setCandidates([]);
-    setMessage(null);
+    setMessage(restored ? '已恢复上次选择的照片，正在重新识别...' : null);
     if (!file) {
       setPreview(null);
+      clearDraftImage().catch(() => undefined);
       return;
     }
     setPreview(URL.createObjectURL(file));
+    if (persistDraft) {
+      saveDraftImage(file).catch(() => undefined);
+    }
     try {
       const result = await api.identifyBird(file, token);
       setCandidates(result.candidates);
       setBirdName(result.candidates[0]?.name ?? '');
+      setMessage(null);
     } catch {
       setMessage('识别失败，可以手动填写鸟种继续发布。');
     }
@@ -124,6 +263,7 @@ function CreateRecordDrawer({
       setCandidates([]);
       setBirdName('');
       setDescription('');
+      clearDraftImage().catch(() => undefined);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : '发布失败');
     } finally {
@@ -131,24 +271,33 @@ function CreateRecordDrawer({
     }
   }
 
-  function useCurrentLocation() {
-    if (currentLocationStatus === 'unsupported') {
-      setMessage('当前浏览器不支持定位，可以改用地图点选。');
-      return;
+  async function useCurrentLocation() {
+    setLocating(true);
+    setMessage('正在刷新当前位置...');
+    try {
+      const freshLocation = await onRequestCurrentLocation();
+      const matchedLocation = matchLocationName(freshLocation, locations);
+      const nextLocation = {
+        ...freshLocation,
+        locationName: matchedLocation ?? freshLocation.locationName ?? '当前位置',
+      };
+      setLocation(nextLocation);
+      setLocationName(nextLocation.locationName);
+      setMessage(null);
+    } catch (error) {
+      if (currentLocation) {
+        const matchedLocation = matchLocationName(currentLocation, locations);
+        const nextLocation = {
+          ...currentLocation,
+          locationName: matchedLocation ?? currentLocation.locationName ?? '当前位置',
+        };
+        setLocation(nextLocation);
+        setLocationName(nextLocation.locationName);
+      }
+      setMessage(error instanceof Error ? error.message : '定位失败，可以改用地图点选。');
+    } finally {
+      setLocating(false);
     }
-    if (!currentLocation) {
-      setMessage(currentLocationStatus === 'error' ? '定位缓存更新失败，可以改用地图点选。' : '当前位置还在获取中，请稍后再试。');
-      return;
-    }
-
-    const matchedLocation = matchLocationName(currentLocation, locations);
-    const nextLocation = {
-      ...currentLocation,
-      locationName: matchedLocation ?? currentLocation.locationName ?? '当前位置',
-    };
-    setLocation(nextLocation);
-    setLocationName(nextLocation.locationName);
-    setMessage(null);
   }
 
   function pickOnMap() {
@@ -199,9 +348,9 @@ function CreateRecordDrawer({
           <input value={locationName} onChange={(event) => setLocationName(event.target.value)} />
         </label>
         <div className="location-tools">
-          <button type="button" onClick={useCurrentLocation}>
+          <button type="button" onClick={useCurrentLocation} disabled={locating}>
             <LocateFixed size={18} />
-            当前定位
+            {locating ? '定位中' : '当前定位'}
           </button>
           <button type="button" onClick={pickOnMap}>
             <Crosshair size={18} />

@@ -36,6 +36,8 @@ import './AppShell.css';
 
 const TOKEN_KEY = 'magic_chirp_token';
 const LOCATION_REFRESH_MS = 30_000;
+const LOCATION_TIMEOUT_MS = 12_000;
+const LOCATION_FALLBACK_TIMEOUT_MS = 8_000;
 
 function matchesSearch(record: Pick<MapRecord, 'bird_name' | 'location_name' | 'author_nickname'>, query: string) {
   if (!query) return true;
@@ -97,6 +99,25 @@ function mapFilterToQuery(filter: RecordFilter): RecordQuery {
   return query;
 }
 
+function geolocationErrorMessage(error: GeolocationPositionError) {
+  if (error.code === error.PERMISSION_DENIED) {
+    return '定位权限被拒绝，请在浏览器地址栏左侧允许位置权限。';
+  }
+  if (error.code === error.POSITION_UNAVAILABLE) {
+    return '系统暂时拿不到定位，请确认系统定位服务已开启。';
+  }
+  if (error.code === error.TIMEOUT) {
+    return '定位超时，室内或电脑端可能较慢，可以稍后重试或改用地图点选。';
+  }
+  return error.message || '定位失败，可以改用地图点选。';
+}
+
+function getBrowserPosition(options: PositionOptions) {
+  return new Promise<GeolocationPosition>((resolve, reject) => {
+    navigator.geolocation.getCurrentPosition(resolve, reject, options);
+  });
+}
+
 function AppShell() {
   const [activeTab, setActiveTab] = useState<ActiveTab>('map');
   const [auth, setAuth] = useState<AuthState>({
@@ -141,6 +162,56 @@ function AppShell() {
     setNotice(message);
   }, []);
 
+  const refreshCurrentLocation = useCallback(
+    async (maximumAge = LOCATION_REFRESH_MS) => {
+      if (!window.isSecureContext && !['localhost', '127.0.0.1'].includes(window.location.hostname)) {
+        setLocationCache((current) => ({ ...current, status: 'unsupported' }));
+        throw new Error('浏览器定位要求 HTTPS 或 localhost，当前页面环境不能获取定位。');
+      }
+      if (!navigator.geolocation) {
+        setLocationCache((current) => ({ ...current, status: 'unsupported' }));
+        throw new Error('当前浏览器不支持定位');
+      }
+
+      try {
+        let position: GeolocationPosition;
+        try {
+          position = await getBrowserPosition({ enableHighAccuracy: true, timeout: LOCATION_TIMEOUT_MS, maximumAge });
+        } catch (error) {
+          const geolocationError = error as GeolocationPositionError;
+          if (geolocationError.code !== geolocationError.TIMEOUT) {
+            throw geolocationError;
+          }
+          position = await getBrowserPosition({
+            enableHighAccuracy: false,
+            timeout: LOCATION_FALLBACK_TIMEOUT_MS,
+            maximumAge,
+          });
+        }
+
+        const gcjLocation = wgs84ToGcj02(position.coords.longitude, position.coords.latitude);
+        const matchedLocation = matchLocationName(gcjLocation, recordOptions.locations);
+        const nextLocation: BirdPointLocation = {
+          latitude: gcjLocation.latitude,
+          longitude: gcjLocation.longitude,
+          locationName: matchedLocation ?? '当前位置',
+          source: 'gps',
+        };
+        setLocationCache({
+          location: nextLocation,
+          accuracy: position.coords.accuracy,
+          updatedAt: Date.now(),
+          status: 'ready',
+        });
+        return nextLocation;
+      } catch (error) {
+        setLocationCache((current) => ({ ...current, status: 'error' }));
+        throw new Error(geolocationErrorMessage(error as GeolocationPositionError));
+      }
+    },
+    [recordOptions.locations],
+  );
+
   useEffect(() => {
     if (!notice) return;
     const timer = window.setTimeout(() => setNotice(null), 5000);
@@ -177,40 +248,12 @@ function AppShell() {
   }, []);
 
   useEffect(() => {
-    if (!navigator.geolocation) {
-      setLocationCache((current) => ({ ...current, status: 'unsupported' }));
-      return;
-    }
-
-    function refreshCurrentLocation() {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const gcjLocation = wgs84ToGcj02(position.coords.longitude, position.coords.latitude);
-          const matchedLocation = matchLocationName(gcjLocation, recordOptions.locations);
-          const nextLocation: BirdPointLocation = {
-            latitude: gcjLocation.latitude,
-            longitude: gcjLocation.longitude,
-            locationName: matchedLocation ?? '当前位置',
-            source: 'gps',
-          };
-          setLocationCache({
-            location: nextLocation,
-            accuracy: position.coords.accuracy,
-            updatedAt: Date.now(),
-            status: 'ready',
-          });
-        },
-        () => {
-          setLocationCache((current) => ({ ...current, status: 'error' }));
-        },
-        { enableHighAccuracy: true, timeout: 10_000, maximumAge: LOCATION_REFRESH_MS },
-      );
-    }
-
-    refreshCurrentLocation();
-    const timer = window.setInterval(refreshCurrentLocation, LOCATION_REFRESH_MS);
+    refreshCurrentLocation().catch(() => undefined);
+    const timer = window.setInterval(() => {
+      refreshCurrentLocation().catch(() => undefined);
+    }, LOCATION_REFRESH_MS);
     return () => window.clearInterval(timer);
-  }, [recordOptions.locations]);
+  }, [refreshCurrentLocation]);
 
   useEffect(() => {
     if (!auth.token) {
@@ -478,7 +521,7 @@ function AppShell() {
         selectedLocation={pendingLocation}
         locations={recordOptions.locations}
         currentLocation={locationCache.location}
-        currentLocationStatus={locationCache.status}
+        onRequestCurrentLocation={() => refreshCurrentLocation(0)}
         onClose={handleCreateClose}
         onCreated={handleCreated}
         onPickOnMap={handlePickOnMap}

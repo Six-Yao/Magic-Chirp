@@ -57,6 +57,8 @@
   transform-origin: 0 0;
   transition: transform 220ms var(--motion-smooth);
   background: transparent;
+  backface-visibility: hidden;
+  will-change: transform;
 }
 
 .map-world.is-interacting {

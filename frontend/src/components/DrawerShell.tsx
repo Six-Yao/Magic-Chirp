@@ -1,7 +1,9 @@
-﻿import { X } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { X } from 'lucide-react';
+import type { CSSProperties } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 
 const DRAWER_EXIT_MS = 260;
+const DRAWER_MARGIN_PX = 12;
 
 function DrawerShell({
   open,
@@ -17,7 +19,39 @@ function DrawerShell({
   const [expanded, setExpanded] = useState(false);
   const [mounted, setMounted] = useState(open);
   const [closing, setClosing] = useState(false);
+  const [drawerHeight, setDrawerHeight] = useState<number | null>(null);
   const dragStartY = useRef<number | null>(null);
+  const layerRef = useRef<HTMLDivElement | null>(null);
+  const headerRef = useRef<HTMLDivElement | null>(null);
+  const bodyRef = useRef<HTMLDivElement | null>(null);
+  const resizeFrameRef = useRef<number | null>(null);
+
+  const updateDrawerHeight = useCallback(() => {
+    const layer = layerRef.current;
+    const header = headerRef.current;
+    const body = bodyRef.current;
+    if (!layer || !header || !body) return;
+
+    const availableHeight = Math.max(260, layer.clientHeight - DRAWER_MARGIN_PX);
+    const naturalHeight = header.offsetHeight + body.scrollHeight;
+    const targetHeight = expanded ? availableHeight : Math.min(naturalHeight, availableHeight);
+
+    setDrawerHeight(Math.ceil(targetHeight));
+  }, [expanded]);
+
+  const scheduleDrawerHeightUpdate = useCallback(() => {
+    if (resizeFrameRef.current) {
+      window.cancelAnimationFrame(resizeFrameRef.current);
+    }
+
+    resizeFrameRef.current = window.requestAnimationFrame(() => {
+      updateDrawerHeight();
+      resizeFrameRef.current = window.requestAnimationFrame(() => {
+        updateDrawerHeight();
+        resizeFrameRef.current = null;
+      });
+    });
+  }, [updateDrawerHeight]);
 
   useEffect(() => {
     if (open) {
@@ -33,10 +67,35 @@ function DrawerShell({
     const timer = window.setTimeout(() => {
       setMounted(false);
       setClosing(false);
+      setDrawerHeight(null);
     }, DRAWER_EXIT_MS);
 
     return () => window.clearTimeout(timer);
   }, [mounted, open]);
+
+  useLayoutEffect(() => {
+    if (!mounted) return;
+    scheduleDrawerHeightUpdate();
+  }, [children, mounted, scheduleDrawerHeightUpdate]);
+
+  useEffect(() => {
+    if (!mounted) return;
+
+    const observer = new ResizeObserver(scheduleDrawerHeightUpdate);
+    if (layerRef.current) observer.observe(layerRef.current);
+    if (headerRef.current) observer.observe(headerRef.current);
+    if (bodyRef.current) observer.observe(bodyRef.current);
+
+    window.addEventListener('resize', scheduleDrawerHeightUpdate);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('resize', scheduleDrawerHeightUpdate);
+      if (resizeFrameRef.current) {
+        window.cancelAnimationFrame(resizeFrameRef.current);
+        resizeFrameRef.current = null;
+      }
+    };
+  }, [mounted, scheduleDrawerHeightUpdate]);
 
   if (!mounted) return null;
 
@@ -54,10 +113,17 @@ function DrawerShell({
   }
 
   return (
-    <div className={`drawer-layer ${closing ? 'closing' : ''}`}>
+    <div ref={layerRef} className={`drawer-layer ${closing ? 'closing' : ''}`}>
       <button className="drawer-scrim" type="button" aria-label="关闭弹窗" onClick={handleClose} />
-      <section className={`bottom-drawer ${expanded ? 'expanded' : ''}`}>
-        <div className="drawer-sticky-top">
+      <section
+        className={`bottom-drawer ${expanded ? 'expanded' : ''}`}
+        style={
+          {
+            '--drawer-height': drawerHeight ? `${drawerHeight}px` : undefined,
+          } as CSSProperties
+        }
+      >
+        <div ref={headerRef} className="drawer-sticky-top">
           <button
             className="drawer-handle"
             type="button"
@@ -81,7 +147,9 @@ function DrawerShell({
             </button>
           </header>
         </div>
-        {children}
+        <div ref={bodyRef} className="drawer-body" onLoadCapture={scheduleDrawerHeightUpdate}>
+          {children}
+        </div>
       </section>
     </div>
   );
