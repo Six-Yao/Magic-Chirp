@@ -58,7 +58,8 @@ function CreateRecordDrawer({
   const [birdName, setBirdName] = useState('');
   const [location, setLocation] = useState<BirdPointLocation>(selectedLocation ?? DEFAULT_LOCATION);
   const [locationName, setLocationName] = useState(selectedLocation?.locationName ?? DEFAULT_LOCATION.locationName);
-  const [observedAt, setObservedAt] = useState(new Date().toISOString().slice(0, 16));
+  const now = new Date();
+  const [observedAt, setObservedAt] = useState(new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 16));
   const [description, setDescription] = useState('');
   const [visibility, setVisibility] = useState<'public' | 'private'>('public');
   const [message, setMessage] = useState<string | null>(null);
