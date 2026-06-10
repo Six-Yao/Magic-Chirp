@@ -53,7 +53,7 @@ coverage.xml
 *.py,cover
 .hypothesis/
 .pytest_cache/
-cover/
+/cover/
 
 # Translations
 *.mo
@@ -172,6 +172,11 @@ poetry.toml
 
 # LSP config files
 pyrightconfig.json
+
+# Local AI agent and skill assets
+.agents/
+.codex/
+skills-lock.json
 
 uploads/
 *.db
