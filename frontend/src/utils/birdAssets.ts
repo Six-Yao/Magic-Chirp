@@ -5,6 +5,7 @@ import gezi from '../assets/birds/鸽子.png';
 import huiLiangNiao from '../assets/birds/灰椋鸟.png';
 import huiXiQue from '../assets/birds/灰喜鹊.png';
 import maque from '../assets/birds/麻雀.png';
+import hongErBei from '../assets/birds/红耳鹎.png';
 import yeLu from '../assets/birds/夜鹭.png';
 import xique from '../assets/birds/喜鹊.png';
 import yanzi from '../assets/birds/燕子.png';
@@ -22,6 +23,7 @@ const birdAssetMap = new Map<string, string>([
   ['灰椋鸟', huiLiangNiao],
   ['灰喜鹊', huiXiQue],
   ['麻雀', maque],
+  ['红耳鹎', hongErBei],
   ['夜鹭', yeLu],
   ['喜鹊', xique],
   ['燕子', yanzi],
