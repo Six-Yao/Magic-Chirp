@@ -518,6 +518,274 @@
   image-rendering: pixelated;
 }
 
+.bird-guide-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  padding-bottom: 14px;
+}
+
+.bird-guide-card {
+  display: grid;
+  grid-template-columns: 82px minmax(0, 1fr);
+  gap: 10px;
+  min-height: 118px;
+  padding: 9px;
+  border: 4px solid #70442d;
+  border-radius: 8px;
+  background: #fff2c8;
+  box-shadow: 5px 5px 0 rgba(91, 58, 37, 0.2);
+  color: #3f2e23;
+  text-align: left;
+  transition:
+    transform 170ms var(--motion-pop),
+    box-shadow 170ms var(--motion-smooth),
+    background-color 180ms var(--motion-smooth);
+}
+
+.bird-guide-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 6px 9px 0 rgba(91, 58, 37, 0.17);
+}
+
+.bird-guide-card:active,
+.bird-back-button:active,
+.bird-record-row:active {
+  transform: translateY(2px);
+  box-shadow: 3px 3px 0 rgba(91, 58, 37, 0.2);
+}
+
+.bird-guide-image,
+.bird-detail-image,
+.bird-record-thumb {
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border: 3px solid #70442d;
+  background:
+    linear-gradient(45deg, rgba(255, 248, 219, 0.4) 25%, transparent 25% 75%, rgba(255, 248, 219, 0.4) 75%) 0 0 / 18px 18px,
+    #d9edb6;
+  color: #466f36;
+  font-weight: 900;
+}
+
+.bird-guide-image {
+  width: 82px;
+  height: 82px;
+  border-radius: 7px;
+}
+
+.bird-guide-image img,
+.bird-detail-image img,
+.bird-record-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+
+.bird-guide-content {
+  display: grid;
+  align-content: start;
+  gap: 7px;
+  min-width: 0;
+}
+
+.bird-guide-title {
+  display: grid;
+  gap: 4px;
+}
+
+.bird-guide-title h3 {
+  margin: 0;
+  font-size: 22px;
+}
+
+.bird-guide-content p,
+.bird-detail-note {
+  margin: 0;
+  color: #755b43;
+  line-height: 1.35;
+}
+
+.bird-guide-content p {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 17px;
+}
+
+.rarity-badge {
+  display: inline-flex;
+  width: fit-content;
+  padding: 3px 7px;
+  border: 2px solid #6d984b;
+  border-radius: 6px;
+  background: #e6f5c8;
+  color: #466f36;
+  font-size: 16px;
+  font-weight: 900;
+}
+
+.rarity-偶见 {
+  border-color: #c18a2e;
+  background: #fff0bd;
+  color: #8d6122;
+}
+
+.rarity-少见 {
+  border-color: #b96c57;
+  background: #ffe1cf;
+  color: #994532;
+}
+
+.bird-detail-view {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+}
+
+.bird-back-button {
+  display: inline-flex;
+  align-items: center;
+  justify-self: start;
+  gap: 6px;
+  min-height: 40px;
+  padding: 6px 12px;
+  border: 3px solid #70442d;
+  border-radius: 8px;
+  background: #fff8db;
+  box-shadow: 0 4px 0 rgba(91, 58, 37, 0.22);
+  color: #3f2e23;
+  font-weight: 900;
+  transition:
+    transform 150ms var(--motion-pop),
+    box-shadow 150ms var(--motion-smooth);
+}
+
+.bird-detail-hero {
+  display: grid;
+  grid-template-columns: 136px minmax(0, 1fr);
+  gap: 14px;
+  align-items: center;
+  padding: 14px;
+  border: 5px solid #513428;
+  border-radius: 12px;
+  background:
+    linear-gradient(90deg, rgba(112, 68, 45, 0.05) 1px, transparent 1px),
+    #fff2c8;
+  background-size: 12px 12px;
+  box-shadow:
+    inset 0 0 0 4px rgba(255, 234, 167, 0.62),
+    5px 5px 0 rgba(91, 58, 37, 0.22);
+}
+
+.bird-detail-image {
+  width: 136px;
+  height: 136px;
+  border-width: 4px;
+  border-radius: 10px;
+}
+
+.bird-detail-hero h2 {
+  margin: 0 0 8px;
+  font-size: 36px;
+}
+
+.bird-info-panel {
+  display: grid;
+  gap: 9px;
+  padding: 12px;
+  border: 4px solid #70442d;
+  border-radius: 8px;
+  background: #fff8db;
+  box-shadow: 4px 4px 0 rgba(91, 58, 37, 0.16);
+}
+
+.bird-info-panel h3 {
+  margin: 0;
+  font-size: 23px;
+}
+
+.bird-info-panel p {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  color: #5c573f;
+  line-height: 1.45;
+}
+
+.bird-info-panel ul {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding-left: 22px;
+  color: #5c573f;
+  line-height: 1.45;
+}
+
+.bird-tag-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.bird-tag-row span {
+  padding: 5px 8px;
+  border: 2px solid #d19b5a;
+  border-radius: 7px;
+  background: #fff2c8;
+  color: #66523d;
+  font-weight: 900;
+}
+
+.book-stats.compact {
+  justify-content: start;
+}
+
+.bird-record-list {
+  display: grid;
+  gap: 8px;
+}
+
+.bird-record-row {
+  display: grid;
+  grid-template-columns: 58px minmax(0, 1fr);
+  gap: 9px;
+  align-items: center;
+  padding: 7px;
+  border: 3px solid #70442d;
+  border-radius: 8px;
+  background: #fff2c8;
+  color: #3f2e23;
+  text-align: left;
+  transition:
+    transform 150ms var(--motion-pop),
+    box-shadow 150ms var(--motion-smooth);
+}
+
+.bird-record-thumb {
+  width: 58px;
+  height: 58px;
+  border-radius: 7px;
+}
+
+.bird-record-row strong,
+.bird-record-row time {
+  display: block;
+}
+
+.bird-record-row strong {
+  font-size: 19px;
+}
+
+.bird-record-row time {
+  margin-top: 3px;
+  color: #755b43;
+  font-size: 16px;
+}
+
 .record-card h3,
 .record-card p {
   margin: 0;
