@@ -388,7 +388,14 @@ function AppShell() {
       return <RecordsView records={filteredRecords} status={recordsStatus} searchQuery={normalizedSearch} onOpenRecord={openRecordDetail} />;
     }
     if (activeTab === 'birds') {
-      return <BirdsView records={filteredRecords} searchQuery={normalizedSearch} onOpenRecord={openRecordDetail} />;
+      return (
+        <BirdsView
+          records={filteredRecords}
+          searchQuery={normalizedSearch}
+          token={auth.token}
+          onOpenRecord={openRecordDetail}
+        />
+      );
     }
     return (
       <ProfileView

@@ -10,7 +10,7 @@
   height: 100%;
   min-height: 0;
   overflow: hidden;
-  padding: 8px;
+  padding: 0;
 }
 
 .pixel-campus-map {
@@ -19,16 +19,10 @@
   height: 100%;
   min-height: 0;
   overflow: hidden;
-  border: 5px solid #513428;
-  border-radius: 12px;
-  background:
-    linear-gradient(rgba(178, 136, 58, 0.14) 1px, transparent 1px) 0 0 / 16px 16px,
-    linear-gradient(90deg, rgba(178, 136, 58, 0.14) 1px, transparent 1px) 0 0 / 16px 16px,
-    linear-gradient(135deg, rgba(255, 237, 184, 0.5), rgba(230, 185, 101, 0.18)),
-    #f1cf8b;
-  box-shadow:
-    inset 0 0 0 5px rgba(255, 244, 194, 0.5),
-    5px 5px 0 rgba(91, 58, 37, 0.22);
+  border: 0;
+  border-radius: 0;
+  background: #f1cf8b;
+  box-shadow: none;
   cursor: grab;
   touch-action: none;
   -webkit-user-select: none;
@@ -451,7 +445,7 @@
   padding: 9px;
   border: 4px solid #70442d;
   border-radius: 8px;
-  background: #fff2c8;
+  background: #fff2c8 url("../assets/bird_card.webp") center / 100% 100% no-repeat;
   box-shadow: 5px 5px 0 rgba(91, 58, 37, 0.2);
   color: #3f2e23;
   text-align: left;
@@ -514,7 +508,7 @@
   inset: 8px;
   width: calc(100% - 16px);
   height: calc(100% - 16px);
-  object-fit: contain;
+  object-fit: cover;
   image-rendering: pixelated;
 }
 
@@ -541,11 +535,35 @@
     transform 170ms var(--motion-pop),
     box-shadow 170ms var(--motion-smooth),
     background-color 180ms var(--motion-smooth);
+  animation: bird-card-enter 320ms var(--motion-smooth) both;
+  animation-delay: calc(min(var(--bird-index, 0), 8) * 36ms);
 }
 
 .bird-guide-card:hover {
-  transform: translateY(-4px);
+  transform: translateY(-4px) scale(1.01);
   box-shadow: 6px 9px 0 rgba(91, 58, 37, 0.17);
+}
+
+.bird-guide-card.uncollected {
+  background: #efe6cf;
+  color: #6f6659;
+  filter: saturate(0.72);
+}
+
+.bird-guide-card.uncollected .bird-guide-image {
+  background:
+    linear-gradient(45deg, rgba(255, 248, 219, 0.28) 25%, transparent 25% 75%, rgba(255, 248, 219, 0.28) 75%) 0 0 / 18px 18px,
+    #d8d2bf;
+}
+
+.bird-guide-card.uncollected .bird-guide-image img,
+.bird-detail-hero.uncollected .bird-detail-image img {
+  opacity: 0.5;
+  filter: grayscale(1) brightness(0.52) contrast(1.25);
+}
+
+.bird-guide-card.collected {
+  background: #fff2c8 url("../assets/bird_handbook_back.webp") center / cover;
 }
 
 .bird-guide-card:active,
@@ -582,6 +600,11 @@
   height: 100%;
   object-fit: contain;
   image-rendering: pixelated;
+  transition: transform 260ms var(--motion-smooth);
+}
+
+.bird-guide-card:hover .bird-guide-image img {
+  transform: translateY(-2px) scale(1.06);
 }
 
 .bird-guide-content {
@@ -625,6 +648,7 @@
   color: #466f36;
   font-size: 16px;
   font-weight: 900;
+  animation: badge-pop 260ms var(--motion-pop) both;
 }
 
 .rarity-偶见 {
@@ -660,7 +684,15 @@
   font-weight: 900;
   transition:
     transform 150ms var(--motion-pop),
-    box-shadow 150ms var(--motion-smooth);
+    box-shadow 150ms var(--motion-smooth),
+    background-color 180ms var(--motion-smooth);
+  animation: bird-detail-step 260ms var(--motion-smooth) both;
+}
+
+.bird-back-button:hover {
+  background: #fff2c8;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 0 rgba(91, 58, 37, 0.2);
 }
 
 .bird-detail-hero {
@@ -669,8 +701,8 @@
   gap: 14px;
   align-items: center;
   padding: 14px;
-  border: 5px solid #513428;
-  border-radius: 12px;
+  border: 0;
+  border-radius: 0;
   background:
     linear-gradient(90deg, rgba(112, 68, 45, 0.05) 1px, transparent 1px),
     #fff2c8;
@@ -678,6 +710,14 @@
   box-shadow:
     inset 0 0 0 4px rgba(255, 234, 167, 0.62),
     5px 5px 0 rgba(91, 58, 37, 0.22);
+  animation: bird-detail-hero-in 340ms var(--motion-pop) both;
+}
+
+.bird-detail-hero.uncollected {
+  background:
+    linear-gradient(90deg, rgba(112, 68, 45, 0.05) 1px, transparent 1px),
+    #eee5d2;
+  filter: saturate(0.78);
 }
 
 .bird-detail-image {
@@ -687,9 +727,19 @@
   border-radius: 10px;
 }
 
+.bird-detail-image img {
+  animation: bird-image-bob 460ms var(--motion-pop) both;
+}
+
 .bird-detail-hero h2 {
   margin: 0 0 8px;
   font-size: 36px;
+}
+
+.collection-status {
+  margin: 9px 0 0;
+  color: #755b43;
+  font-weight: 900;
 }
 
 .bird-info-panel {
@@ -700,6 +750,23 @@
   border-radius: 8px;
   background: #fff8db;
   box-shadow: 4px 4px 0 rgba(91, 58, 37, 0.16);
+  animation: bird-detail-step 320ms var(--motion-smooth) both;
+}
+
+.bird-detail-view .bird-info-panel:nth-of-type(2) {
+  animation-delay: 55ms;
+}
+
+.bird-detail-view .bird-info-panel:nth-of-type(3) {
+  animation-delay: 95ms;
+}
+
+.bird-detail-view .bird-info-panel:nth-of-type(4) {
+  animation-delay: 135ms;
+}
+
+.bird-detail-view .bird-info-panel:nth-of-type(5) {
+  animation-delay: 175ms;
 }
 
 .bird-info-panel h3 {
@@ -738,6 +805,7 @@
   background: #fff2c8;
   color: #66523d;
   font-weight: 900;
+  animation: badge-pop 240ms var(--motion-pop) both;
 }
 
 .book-stats.compact {
@@ -762,7 +830,15 @@
   text-align: left;
   transition:
     transform 150ms var(--motion-pop),
-    box-shadow 150ms var(--motion-smooth);
+    box-shadow 150ms var(--motion-smooth),
+    background-color 180ms var(--motion-smooth);
+  animation: bird-record-enter 260ms var(--motion-smooth) both;
+}
+
+.bird-record-row:hover {
+  transform: translateY(-3px);
+  background: #fff7d8;
+  box-shadow: 4px 6px 0 rgba(91, 58, 37, 0.15);
 }
 
 .bird-record-thumb {
@@ -941,9 +1017,7 @@
   height: 230px;
   min-height: 230px;
   overflow: hidden;
-  background:
-    radial-gradient(circle at 80% 42%, #8bd0e6 0 19%, transparent 20%),
-    linear-gradient(#fff2c8 0 55%, #bd8152 56%);
+  background: #fff2c8 url("../assets/window.webp") center / cover;
 }
 
 .profile-records {
@@ -1106,6 +1180,89 @@
   to {
     opacity: 1;
     transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes bird-card-enter {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.96);
+    filter: saturate(0.82);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: saturate(1);
+  }
+}
+
+@keyframes bird-detail-hero-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.96);
+    filter: saturate(0.82);
+  }
+
+  72% {
+    opacity: 1;
+    transform: translateY(-2px) scale(1.01);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: saturate(1);
+  }
+}
+
+@keyframes bird-detail-step {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes bird-record-enter {
+  from {
+    opacity: 0;
+    transform: translateX(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes bird-image-bob {
+  from {
+    transform: translateY(6px) scale(0.92);
+  }
+
+  70% {
+    transform: translateY(-3px) scale(1.04);
+  }
+
+  to {
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes badge-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.82);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
   }
 }
 
