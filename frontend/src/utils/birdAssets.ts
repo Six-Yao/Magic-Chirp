@@ -1,19 +1,19 @@
-import baige from '../assets/birds/白头鹎.png';
-import bage from '../assets/birds/八哥.png';
-import daShanQue from '../assets/birds/大山雀.png';
-import gezi from '../assets/birds/鸽子.png';
-import huiLiangNiao from '../assets/birds/灰椋鸟.png';
-import huiXiQue from '../assets/birds/灰喜鹊.png';
-import maque from '../assets/birds/麻雀.png';
-import hongErBei from '../assets/birds/红耳鹎.png';
-import yeLu from '../assets/birds/夜鹭.png';
-import xique from '../assets/birds/喜鹊.png';
-import yanzi from '../assets/birds/燕子.png';
-import wuya from '../assets/birds/乌鸦.png';
-import wudong from '../assets/birds/乌鸫.png';
-import xiuyan from '../assets/birds/绣眼鸟.png';
-import zhuJingBanJiu from '../assets/birds/珠颈斑鸠.png';
-import baiJiLing from '../assets/birds/白鹡鸰.png';
+import baige from '../assets/birds/白头鹎.webp';
+import bage from '../assets/birds/八哥.webp';
+import daShanQue from '../assets/birds/大山雀.webp';
+import gezi from '../assets/birds/鸽子.webp';
+import huiLiangNiao from '../assets/birds/灰椋鸟.webp';
+import huiXiQue from '../assets/birds/灰喜鹊.webp';
+import maque from '../assets/birds/麻雀.webp';
+import hongErBei from '../assets/birds/红耳鹎.webp';
+import yeLu from '../assets/birds/夜鹭.webp';
+import xique from '../assets/birds/喜鹊.webp';
+import yanzi from '../assets/birds/燕子.webp';
+import wuya from '../assets/birds/乌鸦.webp';
+import wudong from '../assets/birds/乌鸫.webp';
+import xiuyan from '../assets/birds/绣眼鸟.webp';
+import zhuJingBanJiu from '../assets/birds/珠颈斑鸠.webp';
+import baiJiLing from '../assets/birds/白鹡鸰.webp';
 
 const birdAssetMap = new Map<string, string>([
   ['白头鹎', baige],
