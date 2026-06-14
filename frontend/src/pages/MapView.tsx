@@ -27,8 +27,8 @@ const TOUCH_DRAG_BASE_SPEED = 1.08;
 const TOUCH_DRAG_SCALE_SPEED = 0.09;
 const TOUCH_DRAG_MAX_SPEED = 1.55;
 const CLUSTER_DISTANCE = 4.8;
-const FRESHNESS_STEP_HOURS = 3;
-const FRESHNESS_STEPS = 8;
+const FRESHNESS_YELLOW_DAYS = 3;
+const FRESHNESS_STEPS = 24;
 const CLUSTER_EXIT_MS = 280;
 const ORBIT_SPREAD_MS = 520;
 const ORBIT_START_PAUSE_MS = 180;
@@ -92,8 +92,9 @@ function percentToLocation(left: number, top: number): BirdPointLocation {
 
 function markerFreshnessColor(value: string) {
   const observedAt = new Date(value).getTime();
-  const elapsedHours = Math.max(0, (Date.now() - observedAt) / 3_600_000);
-  const freshnessStep = Math.max(0, FRESHNESS_STEPS - Math.floor(elapsedHours / FRESHNESS_STEP_HOURS));
+  const elapsedDays = Math.max(0, (Date.now() - observedAt) / 86_400_000);
+  const elapsedStep = Math.floor((elapsedDays / FRESHNESS_YELLOW_DAYS) * FRESHNESS_STEPS);
+  const freshnessStep = Math.max(0, FRESHNESS_STEPS - elapsedStep);
   const freshness = freshnessStep / FRESHNESS_STEPS;
   const hue = 40 + freshness * 74;
   const saturation = 82 - freshness * 12;
